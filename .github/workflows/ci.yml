@@ -1,0 +1,44 @@
+name: Validate firmware extensions
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m unittest discover -s tests -v
+      - run: python tools/check_native_size.py --clang /usr/bin/clang
+      - run: python tools/check_native_arm.py artifacts/native-size/sizecheck-only.elf
+      - run: python tools/build_firmware.py --stock-fw 2.0.7 --variant qr --clang /usr/bin/clang
+      - run: python tools/check_overlay207.py artifacts/fw2.0.7/qr
+      - run: python tools/check_native_arm.py artifacts/fw2.0.7/qr/overlay207-offline.elf --overlay
+      - run: python tools/build_firmware.py --stock-fw 2.0.7 --variant screen --clang /usr/bin/clang
+      - run: python tools/check_overlay207.py artifacts/fw2.0.7/screen
+      - run: node --check phone/app.js && node --check phone/codec.js && node --check phone/store.js
+  native-host:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/artifacts/native-host-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt
+      - run: python tools/prepare_native_host.py --fetch
+      - run: cargo +1.99.1 fmt --manifest-path native-host/Cargo.toml -- --check
+      - run: cargo +1.99.1 test --manifest-path native-host/Cargo.toml --locked
+      - run: cargo +1.99.1 test --manifest-path .deps/native-host/km003c-rs/km003c-lib/Cargo.toml --features hw23-overlay --lib firmware:: --locked
+      - run: cargo +1.99.1 build --manifest-path native-host/Cargo.toml --locked

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "id": "fw2.0.7-hw2.3-c63057ea",
+  "stock_firmware": "2.0.7",
+  "hardware": "2.3",
+  "status": "experimental-hardware-tested",
+  "stock_app_sha256": "c63057eaf08b8625e7ac2fc7270c06d75515e78fdbdd46080bdf4b696984ec67",
+  "bootloader_sha256": "8e972bbd2abffa199d465082f473823372e32d4b4c86574664a976afd2797809",
+  "builder": "tools/build_overlay207.py",
+  "variants": {
+    "qr": {
+      "description": "PD source/cable/PPS QR export",
+      "reference_extension_sha256": "4140de1a80beef119b18de0f12bc0ebbcfe74c2c579bb24941694173ee4e25f0"
+    },
+    "screen": {
+      "description": "Lossless visible/tall BMP capture and read-only USB export",
+      "implementation_revision": "18c",
+      "reference_extension_sha256": "d2687c4fc7b27d55ab934d2dda74d9b6a7830254d786f78cd7f3bdc3b4c4778b",
+      "physical_storage_bytes": 1507328,
+      "file_limit": 96,
+      "maximum_height": 2048
+    }
+  },
+  "reference_hash_note": "Reference extensions are compiler-specific; exact stock/loader checks are always required. Generated output is not an installable stock image."
+}
