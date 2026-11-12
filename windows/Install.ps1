@@ -1,4 +1,4 @@
-param([switch]$CheckPackage)
+param([switch]$CheckPackage, [string]$DataDirectory)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 $packageRoot = $PSScriptRoot
@@ -13,7 +13,9 @@ function Assert-Package {
         $seen[$name] = $true
         $path = Join-Path $packageRoot $name
         $item = Get-Item -LiteralPath $path
-        if ($item.PSIsContainer -or $item.Length -ne $entry.bytes -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try { $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($path))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() }
+        if ($item.PSIsContainer -or $item.Length -ne $entry.bytes -or $hash -ne $entry.sha256) {
             throw "Package file changed: $name. Extract a fresh release ZIP."
         }
     }
@@ -40,7 +42,7 @@ function Confirm-Write([string]$Word) {
     Ask-Ready 'Unplug HID, hold Exit, reconnect to the SAME PC USB port, release Exit at BOOT Loader. Press Enter when ready.' 'HIDを抜き、Exitを押しながら同じPC側USBポートへ再接続。BOOT Loaderが出たら離し、準備できたらEnter。'
     if ((Read-Host (T "Type $Word to write firmware" "書き込むには $Word と入力")) -cne $Word) { throw 'Cancelled; no write requested.' }
 }
-$script:Work = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'KM003C-FW-Extensions'
+$script:Work = if ($DataDirectory) { [IO.Path]::GetFullPath($DataDirectory) } else { Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'KM003C-FW-Extensions' }
 $null = New-Item -ItemType Directory -Path $script:Work -Force
 $statePath = Join-Path $script:Work 'last-session.json'
 $script:Stock = ''

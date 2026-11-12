@@ -71,6 +71,7 @@ def smoke(folder, stock=None):
     env = os.environ.copy()
     system = Path(os.environ['SystemRoot']) / 'System32'
     env['PATH'] = str(system) + os.pathsep + str(system / 'WindowsPowerShell/v1.0')
+    env['PSModulePath'] = str(system / 'WindowsPowerShell/v1.0/Modules')
     ps = system / 'WindowsPowerShell/v1.0/powershell.exe'
     host = folder / 'km003c-overlay-host.exe'
     backup = folder / 'km003c-backup.exe'
@@ -79,7 +80,8 @@ def smoke(folder, stock=None):
     verify = [ps, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', folder / 'Install.ps1', '-CheckPackage']
     run(verify, env)
     for language in ('1', '2'):
-        run([ps, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', folder / 'Install.ps1'], env, input=language + '\n0\n')
+        run([ps, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', folder / 'Install.ps1',
+             '-DataDirectory', folder.parent / 'smoke-state'], env, input=language + '\n0\n')
     gate_path = folder / 'overlays/qr/gate.bin'
     original_gate = gate_path.read_bytes()
     try:
