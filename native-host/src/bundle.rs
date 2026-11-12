@@ -55,7 +55,12 @@ pub fn stock(folder: &Path) -> Result<Stock> {
     let mut baseline = vec![255; END - BASE];
     baseline[..original.len()].copy_from_slice(&original);
     baseline[0x70000 - BASE..].copy_from_slice(&tail);
-    let restore_package = fs::read(folder.join("stock-restore.mencrypt"))?;
+    let restore_path = folder.join("stock-restore.mencrypt");
+    let restore_package = if restore_path.exists() {
+        fs::read(restore_path)?
+    } else {
+        hw23::package_stock(&original, &loader)?
+    };
     let calibration = fs::read(folder.join("calibration-03000c00.bin"))?;
     ensure!(
         calibration.len() == 1024,

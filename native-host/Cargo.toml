@@ -1,8 +1,16 @@
 [package]
 name = "km003c-overlay-host"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
+
+[[bin]]
+name = "km003c-overlay-host"
+path = "src/main.rs"
+
+[[bin]]
+name = "km003c-backup"
+path = "../.deps/native-host/backup/bootstrap/src/main.rs"
 
 [dependencies]
 anyhow = "1.0.104"

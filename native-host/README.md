@@ -2,7 +2,7 @@
 
 English · [日本語](README.ja.md)
 
-Use the [installation and recovery guide](../docs/INSTALL.md). This initial release is source only. The host tools qualify an exact HW 2.3 / stock 2.0.7 backup, package and audit the overlay offline, check the connected meter, and perform explicit installation or restoration commands.
+Use the [Windows installation and recovery guide](../docs/INSTALL.md). The release ZIP offers an English/Japanese menu without Python or a compiler. The host tools qualify an exact HW 2.3 / stock 2.0.7 backup, package and audit the overlay offline, check the connected meter, and perform explicit installation or restoration commands.
 
 ## Build from source
 
@@ -16,11 +16,13 @@ cargo test --manifest-path native-host/Cargo.toml --locked
 
 Use `--km003c-source` and `--backup-source` for local checkouts of the pinned commits. On the tested Windows GNU toolchain, link with LLD and run both tools with `--help` before packaging. The ordinary updater bounds remain in place outside this dedicated exact-build path.
 
-For a Windows ZIP, build both release executables. The backup CLI manifest is `.deps/native-host/backup/bootstrap/Cargo.toml`. Build the stock-free overlay using [the overlay build instructions](../docs/OVERLAY-207.md). Export `cargo metadata --format-version 1 --locked --filter-platform x86_64-pc-windows-gnu` for each manifest. Run `python tools/package_windows_release.py --help` for the packaging inputs. The packager uses a fixed file list and writes a separate SHA-256 file. Audit a fresh extraction with a qualified backup before distributing it.
+For a Windows ZIP, build both executables with `cargo build --manifest-path native-host/Cargo.toml --release --bins --locked`. The backup binary uses the pinned backup crate's CLI source, with the same isolated library patch and host lockfile. Build both qualified stock-free overlays and export Cargo metadata. See [release assembly and validation](../docs/WINDOWS-RELEASE.md). The fixed packager writes an inventory and a separate SHA-256 file. Audit a fresh extraction with a qualified backup before distributing it.
 
 ## Validation and recovery
 
 Use your unit's qualified backup for `package`, `audit`, and all device commands. The bundle includes the extended update, a separate erase pass for the added sectors, and the original restore container. The host compares expected bytes and models both restoration stages before programming. Output folders can contain firmware, identity, calibration, or RAM and are for private storage.
+
+`--stock <backup> prepare --variant qr|screen --overlay <component-folder> --output <new-private-folder>` performs all preparation offline without Python. It accepts only the compiled-in hashes of the qualified components. If the backup has no `stock-restore.mencrypt`, the host derives recovery from the exact original application and verifies that it reproduces the committed bytes; it does not modify the backup folder. An existing recovery container is still validated and retained exactly.
 
 `check-device` reads and compares the device without switching mode or writing. `flash-probe` requires the known stock image or an exact, explicitly supplied prior bundle. It verifies the full affected ranges and stays in DFU. `start-probe` independently checks the installed image before startup. `restore` checks and clears the added sectors before applying the original application. `start-stock` verifies the original image before startup.
 

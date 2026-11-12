@@ -24,6 +24,6 @@ Follow [compatibility and porting](docs/COMPATIBILITY.md). Keep old firmware pro
 
 ## Publication
 
-Only source, synthetic fixtures, license files and sanitized documentation belong in Git. Backups, calibration, serial/device identity, raw stock/disassembly/RAM/NOR, BMP captures and generated private update packages stay outside commits, Actions uploads and releases. Do not use `git add -f` for these files. Initial release is source-only; no automatically generated firmware or Windows ZIP is uploaded.
+Only source, synthetic fixtures, license files and sanitized documentation belong in Git. Backups, calibration, serial/device identity, raw stock/disassembly/RAM/NOR, BMP captures and generated private update packages stay outside commits, Actions uploads and releases. Do not use `git add -f` for these files. Windows Releases may contain only audited stock-free tools/components and their notices, assembled with the fixed packager; see [release validation](docs/WINDOWS-RELEASE.md). Never upload a private preparation or backup folder.
 
 日本語: FW別の移植条件は[対応表](docs/COMPATIBILITY.ja.md)を参照してください。個体情報や純正ROMを含まない公開ソースだけで試験できることを維持し、実機確認とモデル試験を区別してください。

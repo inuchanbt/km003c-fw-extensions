@@ -136,6 +136,38 @@ pub fn parse(bytes: &[u8], qualified_loader: &[u8]) -> Result<FirmwareImage, KME
 pub fn package(raw: &[u8], qualified_loader: &[u8]) -> Result<Vec<u8>, KMError> {
     verify_loader(qualified_loader)?;
     validate_payload(raw)?;
+    let encoded = encode_container(raw, "Exact HW2.3 experimental overlay")?;
+    parse(&encoded, qualified_loader)?;
+    Ok(encoded)
+}
+
+/// Derive recovery from the owner's exact, committed stock backup. No USB.
+pub fn package_stock(original: &[u8], qualified_loader: &[u8]) -> Result<Vec<u8>, KMError> {
+    verify_loader(qualified_loader)?;
+    if digest(original) != "c63057eaf08b8625e7ac2fc7270c06d75515e78fdbdd46080bdf4b696984ec67" {
+        return Err(invalid(
+            "Recovery requires the exact committed stock application",
+        ));
+    }
+    let encoded = stock_container(original)?;
+    if FirmwareImage::parse(&encoded)?.installed_data()? != original {
+        return Err(invalid(
+            "Recovery does not reproduce the original application",
+        ));
+    }
+    Ok(encoded)
+}
+
+fn stock_container(original: &[u8]) -> Result<Vec<u8>, KMError> {
+    if original.len() < 0x460 || original.len() > MAX_IMAGE_BYTES {
+        return Err(invalid("Invalid stock application length"));
+    }
+    let mut raw = original.to_vec();
+    raw[IMAGE_METADATA_OFFSET..IMAGE_METADATA_OFFSET + 8].fill(255);
+    encode_container(&raw, "Owner-generated stock recovery")
+}
+
+fn encode_container(raw: &[u8], description: &str) -> Result<Vec<u8>, KMError> {
     let text = |offset| -> Result<String, KMError> {
         let value = &raw[offset..offset + 12];
         let end = value.iter().position(|b| *b == 0).unwrap_or(12);
@@ -154,7 +186,7 @@ pub fn package(raw: &[u8], qualified_loader: &[u8]) -> Result<Vec<u8>, KMError> 
         format!("{:08X}", crc32fast::hash(raw)),
         raw.len().to_string(),
         String::new(),
-        "Exact HW2.3 experimental overlay".into(),
+        description.into(),
     ];
     let mut encoded = (FIELD_COUNT as u32).to_be_bytes().to_vec();
     for field in fields {
@@ -170,7 +202,6 @@ pub fn package(raw: &[u8], qualified_loader: &[u8]) -> Result<Vec<u8>, KMError> 
     }
     encoded.extend_from_slice(&(encrypted.len() as u32).to_be_bytes());
     encoded.extend(encrypted);
-    parse(&encoded, qualified_loader)?;
     Ok(encoded)
 }
 
@@ -232,6 +263,25 @@ async fn read_loader(transport: &mut impl FirmwareTransport) -> Result<Vec<u8>, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recovery_roundtrip_restores_committed_metadata_and_checks_exact_inputs() {
+        let encoded = super::super::tests::package(0x500, &[]);
+        let original = FirmwareImage::parse(&encoded)
+            .unwrap()
+            .installed_data()
+            .unwrap();
+        let recovery = stock_container(&original).unwrap();
+        assert_eq!(
+            FirmwareImage::parse(&recovery)
+                .unwrap()
+                .installed_data()
+                .unwrap(),
+            original
+        );
+        assert!(package_stock(&original, &[255; 0x3ffc]).is_err());
+        assert!(stock_container(&[0; 16]).is_err());
+    }
 
     fn synthetic(overlay: bool) -> (Vec<u8>, String) {
         let mut data = vec![255; TAIL_OFFSET + 80];

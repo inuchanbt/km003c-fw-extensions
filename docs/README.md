@@ -9,3 +9,4 @@
 - [Capture hardware record](HARDWARE-SCREEN-2026-11-11.ja.md)
 - [Host CLI](HOST-CLI.md), [QR format](QR-FORMAT.md), [stock-free native core](../native/README.md)
 - [Version profile](../firmware/v2.0.7/profile.json), [development](../CONTRIBUTING.md), [licenses](../THIRD_PARTY_NOTICES.md)
+- [Windows release assembly and validation](WINDOWS-RELEASE.md)

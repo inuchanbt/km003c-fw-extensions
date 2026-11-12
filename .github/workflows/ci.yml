@@ -43,3 +43,27 @@ jobs:
       - run: >-
           cargo +1.99.1 test --manifest-path .deps/native-host/km003c-rs/km003c-lib/Cargo.toml --features hw23-overlay --lib firmware:: --locked
       - run: cargo +1.99.1 build --manifest-path native-host/Cargo.toml --locked
+  windows-host:
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/artifacts/native-host-windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustup toolchain install 1.99.1 --profile minimal
+      - run: python tools/prepare_native_host.py --fetch
+      - run: cargo +1.99.1 test --manifest-path native-host/Cargo.toml --locked
+      - run: cargo +1.99.1 build --manifest-path native-host/Cargo.toml --release --bins --locked
+      - shell: pwsh
+        run: |
+          & artifacts/native-host-windows/release/km003c-overlay-host.exe --help
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & artifacts/native-host-windows/release/km003c-backup.exe --help
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $parseTokens = $null
+          $parseErrors = $null
+          $text = Get-Content windows/Install.ps1 -Raw -Encoding UTF8
+          [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count) { throw ($parseErrors | Out-String) }

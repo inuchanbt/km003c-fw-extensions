@@ -3,6 +3,7 @@
 [English](README.md) · 日本語
 
 HW2.3／純正2.0.7の既知アプリと、既知ハッシュのブートローダーだけに対応する実験用CLIです。
+Windows利用者向けの英日メニューは[導入・復旧手順](../docs/INSTALL.ja.md)を参照してください。配布ZIPではPythonやコンパイラーを使わず、`prepare`で自分のバックアップから両版の導入・復旧データを作れます。バックアップに復旧コンテナーがなくても、既知の元アプリから生成し、元の全バイトへ戻ることを確認します。バックアップそのものは変更しません。
 2026-11-05に対象1個体で、別置き拡張の書込み・起動・GUI呼出し先の観測・純正への完全復元を確認しました。
 別置き拡張は、純正PDM検出中のSPR/EPR PDOを保持しQRへ渡します。
 追加GETの実装と確認範囲は [本体の追加情報取得](../docs/NATIVE-INFO-207.ja.md) を参照してください。
@@ -125,6 +126,6 @@ cargo test --manifest-path native-host/Cargo.toml --locked
 cargo test --manifest-path .deps/native-host/km003c-rs/km003c-lib/Cargo.toml --features hw23-overlay --lib firmware:: --locked
 ```
 
-ホスト側3件、ライブラリの既存・専用経路23件を確認しています。
+ホスト側6件、ライブラリの既存・専用経路24件を確認しています。
 通常上限維持、対象違い・loader違いでの停止、確認応答の破損・切断・空／過剰データ、
 再送禁止、拡張コードの変更範囲、暗号化余白、消去範囲と2段階復旧を検証します。

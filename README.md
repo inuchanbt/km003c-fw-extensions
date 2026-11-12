@@ -17,6 +17,10 @@ These are **separate firmware builds**. Keeping both in this repository does not
 
 Capture storage is **1472 KiB with a 96-file limit**. Large images can fill storage sooner. The 128 MiB USB volume is a virtual BMP view, not physical capacity. See [capture operation](docs/SCREEN-CAPTURE-207.md).
 
+## Install on Windows
+
+Download the **Windows x64 ZIP** from [Releases](https://github.com/inuchanbt/km003c-fw-extensions/releases), extract it, and double-click **Install.cmd**. The English/Japanese menu guides you through your own stock backup, read-only BOOT Loader qualification, QR/capture preparation, installation and restoration. No Python, Rust or compiler is required. The ZIP contains extension components and tools; stock firmware and private recovery are generated locally from your meter. Read [the installation guide](docs/INSTALL.md) first. The kit is experimental and unsigned; see [validation scope](docs/WINDOWS-RELEASE.md).
+
 ## Build from source
 
 Requires Python 3.12+, Clang/LLD with `arm-none-eabi` support and Node.js for the phone tests. Rust is required only for the native host tools.
@@ -44,7 +48,7 @@ See [QR operation and queries](docs/NATIVE-INFO-207.md) and [the host CLI](docs/
 
 ## Firmware versions and validation
 
-Project version: **0.1.0**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.1.0-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
+Project version: **0.2.0**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.2.0-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
 
 QR and capture were tested on one qualified HW 2.3 meter. Capture validation includes old-image retention, saving into the additional bank, copying all 48 images through Windows USB and matching readback-derived BMPs, protected-settings CRC and calibration checks. The 96-file catalog was tested on the PC; 96 consecutive physical captures were not performed. See [hardware validation](docs/HARDWARE-SCREEN-2026-11-11.ja.md).
 

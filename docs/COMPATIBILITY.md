@@ -13,4 +13,4 @@ Project releases use SemVer from `VERSION`, independently of the stock version. 
 
 For a new stock version, add a profile directory and a dedicated implementation/build route. Requalify loader/application hashes, RAM ownership, GUI/input/display APIs, USB ABI, flash erase/program bounds and recovery. Preserve existing profiles and fail closed on unknown versions. `tools/build_firmware.py` explicitly routes supported implementations; a profile JSON alone does not enable a new version.
 
-No private stock application, loader, update package, identity, calibration or capture belongs in commits, CI artifacts or releases. Initial release is source-only. See [installation](INSTALL.md).
+No private stock application, loader, update package, identity, calibration or capture belongs in commits, CI artifacts or releases. Windows kits contain only tools and stock-free extension components; they derive private installation/recovery files from each owner's qualified backup. See [installation](INSTALL.md).

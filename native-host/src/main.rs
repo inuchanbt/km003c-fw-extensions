@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 mod bundle;
 mod device;
+mod prepare;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -15,6 +16,15 @@ struct Args {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Offline: derive installation and recovery from your qualified backup.
+    Prepare {
+        #[arg(long, value_enum)]
+        variant: prepare::Variant,
+        #[arg(long)]
+        overlay: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Read-only private SRAM snapshot for exact-build GUI analysis.
     InspectGui {
         #[arg(long)]
@@ -83,6 +93,14 @@ enum Command {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    if let Command::Prepare {
+        variant,
+        overlay,
+        output,
+    } = args.command
+    {
+        return prepare::prepare(&args.stock, &overlay, variant, &output);
+    }
     if let Command::Package { candidate, output } = args.command {
         return bundle::package(&args.stock, &candidate, &output);
     }
@@ -146,7 +164,7 @@ async fn main() -> Result<()> {
             let b = bundle::audit(&s, &args.stock, &path)?;
             device::start(&s, &b, &output, false).await?;
         }
-        Command::Package { .. } => unreachable!(),
+        Command::Package { .. } | Command::Prepare { .. } => unreachable!(),
     }
     Ok(())
 }

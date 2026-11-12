@@ -21,6 +21,8 @@ Cargo lockfiles are tracked. A locally packaged Windows ZIP includes the compile
 their dependency notices, and the stock-free overlay components. Users generate their private
 update and recovery files from their own qualified backup.
 
+The Windows kit also includes the committed public sources and vendor notices. Its GNU runtime notices are copied from the actual build toolchains into `licenses/toolchain/`, alongside Rust library copyright/license texts and the MinGW/LLVM notices. These components retain their own terms; the project's MIT license does not replace them. The host and backup CLI are built together from the same pinned dependency graph.
+
 ## Nayuki QR Code generator (C)
 
 `native/vendor/qrcodegen/qrcodegen.c` and `qrcodegen.h` are unmodified from
