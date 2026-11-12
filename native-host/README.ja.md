@@ -126,6 +126,6 @@ cargo test --manifest-path native-host/Cargo.toml --locked
 cargo test --manifest-path .deps/native-host/km003c-rs/km003c-lib/Cargo.toml --features hw23-overlay --lib firmware:: --locked
 ```
 
-ホスト側6件、ライブラリの既存・専用経路24件を確認しています。
+ホスト側6件、バックアップの区画・復旧証拠11件、更新ライブラリの既存・専用経路24件を確認しています。
 通常上限維持、対象違い・loader違いでの停止、確認応答の破損・切断・空／過剰データ、
 再送禁止、拡張コードの変更範囲、暗号化余白、消去範囲と2段階復旧を検証します。

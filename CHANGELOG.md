@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - Live external-memory backup
+
+- Read the first 3 MiB of external NOR as consecutive verified 4 KiB pairs, retrying a changing chunk at most twice. The resulting snapshot is explicitly non-atomic and its method is recorded in schema 2; old schema 1 backups remain readable.
+- Full-region double reads and strict matching remain required for the application, loader, internal tail and calibration. An unstable or short external chunk stops backup without a success record.
+- Keep firmware components and bounded installation/recovery behavior unchanged.
+
 ## 0.2.0 - Windows stock-free installation kit, stock FW 2.0.7
 
 - Add an English/Japanese Windows menu for first backup, read-only loader qualification, offline variant preparation, explicit installation and two-stage restoration.

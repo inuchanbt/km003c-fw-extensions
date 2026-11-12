@@ -48,7 +48,7 @@ See [QR operation and queries](docs/NATIVE-INFO-207.md) and [the host CLI](docs/
 
 ## Firmware versions and validation
 
-Project version: **0.2.0**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.2.0-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
+Project version: **0.2.1**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.2.1-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
 
 QR and capture were tested on one qualified HW 2.3 meter. Capture validation includes old-image retention, saving into the additional bank, copying all 48 images through Windows USB and matching readback-derived BMPs, protected-settings CRC and calibration checks. The 96-file catalog was tested on the PC; 96 consecutive physical captures were not performed. See [hardware validation](docs/HARDWARE-SCREEN-2026-11-11.ja.md).
 

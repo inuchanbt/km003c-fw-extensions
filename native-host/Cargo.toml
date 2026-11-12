@@ -1,6 +1,6 @@
 [package]
 name = "km003c-overlay-host"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "MIT"
 
@@ -27,3 +27,4 @@ km003c-lib = { path = "../.deps/native-host/km003c-rs/km003c-lib" }
 
 [dev-dependencies]
 tempfile = "3.27.0"
+serde = { version = "1.0.229", features = ["derive"] }

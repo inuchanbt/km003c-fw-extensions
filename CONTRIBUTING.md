@@ -18,6 +18,8 @@ The QR/private stock analysis uses its documented environment. Private native sc
 
 Prepare native-host dependencies with `python tools/prepare_native_host.py --fetch`, then use `cargo test --manifest-path native-host/Cargo.toml --locked`. Prepared source is isolated under ignored `.deps/`; upstream commits are pinned. Keep vendor license files intact.
 
+The backup patch records a version-2, non-atomic external NOR snapshot: each 4 KiB chunk must match twice consecutively, with at most two retries for a changing chunk. Internal application/loader/tail/calibration still require two full matching reads. Version-1 backup manifests remain supported. `native-host/tests/backup_patch.rs` runs the pinned backup's synthetic recovery tests and the local changing/short-chunk tests against the patched source.
+
 ## New stock versions
 
 Follow [compatibility and porting](docs/COMPATIBILITY.md). Keep old firmware profiles reproducible. Never relax exact-build checks to accept an unqualified firmware or hardware revision. Record tested versus modeled behavior separately.

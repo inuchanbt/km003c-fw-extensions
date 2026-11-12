@@ -1,6 +1,6 @@
 # Windows release assembly and validation
 
-Project **0.2.0**, stock profile **FW 2.0.7 / HW 2.3**. [English installation](INSTALL.md) / [日本語の導入手順](INSTALL.ja.md).
+Project **0.2.1**, stock profile **FW 2.0.7 / HW 2.3**. [English installation](INSTALL.md) / [日本語の導入手順](INSTALL.ja.md).
 
 The firmware components are unchanged: QR 13400 bytes (`4140de1a…`) and capture 15516 bytes (`d2687c4f…`), with the exact full reference hashes in [the profile](../firmware/v2.0.7/profile.json). The Windows native tool also pins the gate hashes. A mismatched component/variant stops before stock processing or USB access.
 
@@ -27,6 +27,8 @@ Repeat `--runtime-license` for each required runtime/copyright text. `--metadata
 - For private offline qualification, also pass `--stock <your-qualified-backup>`. This creates a private copy **without** a pre-existing restore container, verifies qualification, prepares and audits both variants, compares both entire candidates/erase passes against the earlier Python implementation, and rejects an altered backup. These files stay ignored and are never release inputs.
 - Inspect binary DLL imports and scan the final ZIP for workstation paths, device serials and stock/loader/calibration payloads. Publish only the ZIP and its checksum. Download the published ZIP again and verify the checksum.
 
-The release validates the new launcher/preparation path **offline**; it does not claim a fresh physical installation through that menu. The underlying QR/capture firmware and transfer/recovery paths have earlier hardware results on one qualified meter. The 96-image catalog is PC-tested, not a 96-capture physical endurance test. Executables are unsigned. Firmware version text alone does not establish compatibility.
+On one qualified HW 2.3 meter, version 0.2.0's menu restored stock and installed capture using an earlier qualified backup; internal readback, calibration, capture and USB export passed. Its first-backup attempt failed because two full reads of live external NOR differed. Subsequent read-only observations found 26 changed bytes in the native-record region while the first MiB matched; this reproduces the type of mismatch, though the discarded second read from the original failure prevents proving it was the exact same change.
 
-日本語：今回のWindows版は、純正FWを含めない配布用キットです。新しいメニューからの実機書込みを今回再実施したとは扱わず、オフラインでの生成・復旧照合・改変拒否・展開後の起動確認と、従来の実機確認を区別します。個体バックアップや生成された更新／復旧データをZIPやGitHubへ混ぜないでください。
+For 0.2.1, a read-only probe matched all 768 consecutive 4 KiB pairs. The corrected native backup tool then acquired a fresh stock backup on the meter, qualified loader/application reads in DFU, generated an installation and recovery bundle from that new backup, installed the capture variant, and verified the full internal readback and calibration. The meter displayed `CAPTURE SAVED`. This hardware run used the corrected native CLI, not a freshly downloaded 0.2.1 ZIP; the extracted Windows menu and package are separately smoke-tested offline. The external backup is non-atomic, even if every chunk pair matches. The 96-image catalog is PC-tested, not a 96-capture physical endurance test. Executables are unsigned. Firmware version text alone does not establish compatibility.
+
+日本語：純正FWを含めない配布用キットです。0.2.1の修正版CLIで、純正からの新規バックアップ・DFU読取照合・導入用データの生成・キャプチャ版書込み・撮影を実機1台で確認しました。0.2.1の完成ZIPを使った新規の実機導入と、オフラインでの展開・起動・改変拒否は区別します。外部メモリーのバックアップは区画ごとに2回照合しますが、全体は非原子的です。個体バックアップや生成された更新／復旧データをZIPやGitHubへ混ぜないでください。

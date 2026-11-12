@@ -465,13 +465,14 @@ dependencies = [
 
 [[package]]
 name = "km003c-overlay-host"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
  "crc32fast",
  "km003c-backup",
  "km003c-lib",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",

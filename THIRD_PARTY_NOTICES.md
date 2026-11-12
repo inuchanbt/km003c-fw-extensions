@@ -14,7 +14,7 @@ The source preparer retrieves, without vendoring private data:
   default firmware bounds remain unchanged. Original licenses are retained in the prepared source.
 - [inuchanbt/apdo-doom-on-km003c](https://github.com/inuchanbt/apdo-doom-on-km003c/tree/20622200644f02c6a5e48ad664dc7b8b6fb236ce/bootstrap),
   commit `20622200644f02c6a5e48ad664dc7b8b6fb236ce`, MIT.
-  Only its independent backup crate and license are prepared for the native host.
+  Only its independent backup crate and license are prepared for the native host. A local patch adds non-atomic chunk-pair verification for live external NOR; original source files remain preserved in the ignored prepared tree.
 
 These sources stay in ignored `.deps/native-host/`. The patch, source preparer and
 Cargo lockfiles are tracked. A locally packaged Windows ZIP includes the compiled host and backup tools,
