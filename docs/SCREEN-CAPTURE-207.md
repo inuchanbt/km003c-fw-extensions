@@ -2,7 +2,7 @@
 
 [日本語](SCREEN-CAPTURE-207.ja.md)
 
-The `screen` variant replaces QR display with lossless capture of the native GUI. The current implementation is 18c; project release versions are separate.
+The `screen` variant replaces QR display with lossless capture of the native GUI. Release 0.3.0 adds boot-grouped filenames; project and stock firmware versions are separate.
 
 ## Controls
 
@@ -16,7 +16,7 @@ Tall capture supports full-width native window pages up to 240×2048. The header
 
 ## Files and capacity
 
-New files use uppercase ASCII menu names plus a minimum-two-digit shared sequence, e.g. USBCEMARKER41.BMP or CAPACITY48.BMP. Spaces/punctuation are omitted; unidentified screens use SCREEN. Existing unnamed records retain SC000001.BMP. Numbers expand rather than truncate if necessary. File dates are fixed FAT metadata, not capture timestamps.
+New files have a minimum-four-digit boot group, an uppercase ASCII menu name and a shared minimum-two-digit capture sequence, e.g. `0001_MEASUREMENT02.BMP`. The first successful capture of a boot allocates a group; later captures in that boot reuse it. Export-only and capture-free boots allocate no group. Groups grow past 9999 up to 99999999 and reset when all captures are cleared; they do not identify connected equipment and are not unique across clears. Old records retain their original names. Spaces and punctuation are omitted, unidentified screens use SCREEN, and long menu names are shortened to fit the FAT long-name limit. File dates are fixed FAT metadata, not capture timestamps.
 
 Physical capture storage is **1472 KiB**, with a **96-file catalog limit**. A 16 KiB reservation per image allows 92 images in an otherwise empty bank layout; small records can share sectors. Large tall images and interrupted reservations consume more space, so 96 files are not guaranteed. Full storage does not overwrite old files.
 
@@ -40,7 +40,7 @@ Back up wanted files first. On USB SCREENSHOTS, hold OK alone for two seconds. A
 
 The specifically recognized old DOOM pack uses ERASE DOOM DATA? followed by a separate two-second OK confirmation. This is an explicit destructive operation on that recognized pack; boot alone does not reclaim it. Arbitrary data is refused.
 
-Compatible capture updates may preserve external records after full readback/compatibility checks. Export and explicitly clear both banks before downgrading to a version that cannot see the extra bank. Legacy internal captures require the updater's protected-tail checks; see [installation/recovery](INSTALL.md).
+This version reads existing records without rewriting them. Older capture versions do not understand its KSN2 records. Export wanted images and explicitly clear both capture banks with this version before downgrading or restoring stock. Legacy internal captures require the updater's protected-tail checks; see [installation/recovery](INSTALL.md).
 
 ## Validation and build
 

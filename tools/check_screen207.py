@@ -23,10 +23,15 @@ from tools.check_native_arm import load_elf
 
 def decode(data):
     height = 240
-    if data[:4] == b'KSN1':
+    if data[:4] in (b'KSN1', b'KSN2'):
         height, width = struct.unpack_from('<HH', data, 4)
         assert width == 240 and 240 <= height <= 2048
-        data = data[32:]
+        if data[:4] == b'KSN2':
+            boot, inverse = struct.unpack_from('<II', data, 32)
+            assert 1 <= boot <= 99999999 and boot ^ inverse == 0xffffffff
+            data = data[40:]
+        else:
+            data = data[32:]
     assert data[:3] in (b'KL\1', b'KL\2')
     version = data[2]
     raw, at = bytearray(), 3
@@ -397,7 +402,7 @@ def main():
     assert n ^ complement == sequence ^ seq_check == 0xffffffff and sequence == 1 and committed == 0x31564d43
     payload = bytes(cpu.mem_read(capture_bank + 40, n)); assert zlib.crc32(payload) == crc
     print('Native GUI captured to modeled NOR; command bounds and readback passed.', flush=True)
-    height = struct.unpack_from('<H', payload, 4)[0] if payload[:4] == b'KSN1' else 240
+    height = struct.unpack_from('<H', payload, 4)[0] if payload[:4] in (b'KSN1', b'KSN2') else 240
     if args.tall_height: assert height >= args.tall_height - 2, height
     assert word(owner + 892) == 240 * height and word(owner + 896) == n
     assert word(owner + 900) == 0 and word(owner + 904) >= 2
@@ -497,6 +502,29 @@ def main():
         assert entry == normal_entry
         cpu.reg_write(UC_ARM_REG_R9, 1); call(entry)
         assert cpu.reg_read(UC_ARM_REG_R9) == 0
+
+    if payload[:4] == b'KSN2':
+        def committed_boots(data):
+            found = []
+            for offset in range(0, bank_bytes, 8192):
+                sector = data[offset:offset + 8192]
+                if sector[:4] != b'KSC1': continue
+                at = 16
+                while at + 24 <= len(sector):
+                    size, inv, seq, seq_inv, checksum, commit = struct.unpack_from('<6I', sector, at)
+                    if size == 0xffffffff or not size or size ^ inv != 0xffffffff or at + 24 + size > len(sector): break
+                    image = sector[at + 24:at + 24 + size]
+                    if commit == 0x31564d43 and seq ^ seq_inv == 0xffffffff and zlib.crc32(image) == checksum:
+                        found.append((seq, struct.unpack_from('<I', image, 32)[0]))
+                    at += 24 + ((size + 3) & ~3)
+            return sorted(found)
+        assert committed_boots(saved_flash) == [(1, 1), (2, 1)]
+        boot()
+        keys((20, 19), 100); keys((20, 19), 600); keys((), 601); call(entry)
+        next_boots = committed_boots(bytes(cpu.mem_read(bank, bank_bytes)))
+        assert next_boots[:2] == [(1, 1), (2, 1)] and len(next_boots) == 3 and next_boots[2][1] == 2
+        # Restore only emulator memory; the later USB tests expect two records.
+        cpu.mem_write(bank, saved_flash)
 
     # The real native registration and setup dispatch run. Only the endpoint
     # transfers are modeled; no claim of electrical USB enumeration is made.

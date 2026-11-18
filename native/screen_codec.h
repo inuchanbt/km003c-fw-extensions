@@ -10,7 +10,7 @@ enum { KSC_WIDTH = 240, KSC_HEIGHT = 240, KSC_PIXELS = 57600,
        KSC_RECORD_BYTES = 24, KSC_MAX_BYTES = KSC_SECTOR - KSC_OWNER_BYTES - KSC_RECORD_BYTES,
        KSC_MAX_WIDE_BYTES = KSC_SECTOR * KSC_SECTORS - KSC_OWNER_BYTES * 2 - KSC_RECORD_BYTES,
        KSC_FILES = 96, KSC_BLOCKS = 262144, KSC_BMP_BYTES = 66 + KSC_PIXELS * 2,
-       KSC_MAX_HEIGHT = 2048, KSC_META_BYTES = 32, KSC_MAX_SPAN = 131072,
+       KSC_MAX_HEIGHT = 2048, KSC_META_BYTES = 32, KSC_BOOT_META_BYTES = 40, KSC_MAX_SPAN = 131072,
        KSC_MAX_CAPTURE_BYTES = KSC_MAX_SPAN - KSC_OWNER_BYTES * 2 - KSC_RECORD_BYTES };
 #define KSC_FLASH_BASE 0x78000u
 #define KSC_FLASH_END 0x7c000u
@@ -65,6 +65,8 @@ size_t ksc_encode_finish(struct ksc_encoder *);
 void ksc_decode_init(struct ksc_decoder *, const uint8_t *, size_t);
 unsigned ksc_file_height(const struct ksc_file *);
 uint32_t ksc_file_sequence(const struct ksc_file *);
+uint32_t ksc_file_boot(const struct ksc_file *);
+uint32_t ksc_next_boot(const struct ksc_catalog *);
 void ksc_file_name(const struct ksc_file *, char [36]);
 bool ksc_decode_pixel(struct ksc_decoder *, uint16_t *);
 bool ksc_decode_finish(const struct ksc_decoder *);

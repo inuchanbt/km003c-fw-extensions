@@ -119,6 +119,7 @@ while ($true) {
                 Write-Host (T 'Copy the backup and this complete prepared folder to another safe location before installing.' '導入前にバックアップと、このpreparedフォルダ全体を別の安全な場所にもコピーしてください。')
             }
             '5' {
+                Write-Host (T 'Before switching away from capture 0.3.0, export images and clear both capture banks with that version; older versions cannot read its records.' 'キャプチャ0.3.0から別版へ変更する前は、画像を退避し同版で両保存バンクを消去。旧版は新形式を読めません。')
                 Select-Stock
                 Select-Bundle
                 Call-Tool 'km003c-overlay-host.exe' @('--stock',$script:Stock,'audit','--bundle',$script:Bundle)
@@ -130,6 +131,7 @@ while ($true) {
                 Call-Tool 'km003c-overlay-host.exe' @('--stock',$script:Stock,'start-probe','--bundle',$script:Bundle,'--output',(New-Output 'start'))
             }
             '6' {
+                Write-Host (T 'Before restoring stock, export images and clear both capture banks with the currently installed capture version.' '純正復元の前に、現在のキャプチャ版で画像を退避し両保存バンクを消去してください。')
                 Select-Stock
                 Select-Bundle
                 Call-Tool 'km003c-overlay-host.exe' @('--stock',$script:Stock,'audit','--bundle',$script:Bundle)

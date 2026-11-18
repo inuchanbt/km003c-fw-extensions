@@ -130,27 +130,56 @@ size_t ksc_encode_finish(struct ksc_encoder *e) {
     return !e->failed && e->count == e->pixels ? e->used : 0;
 }
 unsigned ksc_file_height(const struct ksc_file *f) {
-    if (f->size < 4 || memcmp(f->data, "KSN1", 4)) return KSC_HEIGHT;
-    if (f->size < KSC_META_BYTES + 3) return 0;
+    if (f->size < 4 || (memcmp(f->data, "KSN1", 4) && memcmp(f->data, "KSN2", 4))) return KSC_HEIGHT;
+    unsigned meta = !memcmp(f->data, "KSN2", 4) ? KSC_BOOT_META_BYTES : KSC_META_BYTES;
+    if (f->size < meta + 3 || ksc_file_boot(f) == UINT32_MAX) return 0;
     unsigned h = f->data[4] | (unsigned)f->data[5] << 8;
     return h >= KSC_HEIGHT && h <= KSC_MAX_HEIGHT && f->data[6] == 240 && !f->data[7] ? h : 0;
 }
 uint32_t ksc_file_sequence(const struct ksc_file *f) {
     uint32_t sequence; memcpy(&sequence, f->data - 16, sizeof(sequence)); return sequence;
 }
+uint32_t ksc_file_boot(const struct ksc_file *f) {
+    if (f->size < 4 || memcmp(f->data, "KSN2", 4)) return 0;
+    if (f->size < KSC_BOOT_META_BYTES) return UINT32_MAX;
+    uint32_t id, inverse; memcpy(&id, f->data + 32, 4); memcpy(&inverse, f->data + 36, 4);
+    return id && id <= 99999999u && inverse == ~id ? id : UINT32_MAX;
+}
+uint32_t ksc_next_boot(const struct ksc_catalog *c) {
+    uint32_t max = 0;
+    for (unsigned i = 0; i < c->count; ++i) {
+        uint32_t id = ksc_file_boot(&c->files[i]);
+        if (id == UINT32_MAX) return 0;
+        if (id > max) max = id;
+    }
+    return max < 99999999u ? max + 1 : 0;
+}
 void ksc_file_name(const struct ksc_file *f, char out[36]) {
     unsigned n = 0;
-    bool named = f->size >= KSC_META_BYTES && !memcmp(f->data, "KSN1", 4);
+    uint32_t boot = ksc_file_boot(f);
+    bool named = f->size >= KSC_META_BYTES && (!memcmp(f->data, "KSN1", 4) || !memcmp(f->data, "KSN2", 4));
+    char digits[8]; unsigned count = 0, seq = ksc_file_sequence(f);
+    do { digits[count++] = (char)('0' + seq % 10); seq /= 10; } while (seq && count < 6);
+    while (count < (named ? 2u : 6u)) digits[count++] = '0';
+    unsigned seq_count = count;
+    if (boot && boot != UINT32_MAX) {
+        char b[8]; unsigned k = 0;
+        do { b[k++] = (char)('0' + boot % 10); boot /= 10; } while (boot && k < 8);
+        while (k < 4) b[k++] = '0';
+        while (k) out[n++] = b[--k];
+        out[n++] = '_';
+    }
+    unsigned name_start = n;
     if (named) {
-        for (unsigned i = 8; i < KSC_META_BYTES && f->data[i]; ++i) {
+        for (unsigned i = 8; i < KSC_META_BYTES && f->data[i] && n + seq_count + 4 < 35; ++i) {
             unsigned c = f->data[i];
             if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) out[n++] = (char)c;
         }
     }
-    if (!n) { memcpy(out, named ? "SCREEN" : "SC", named ? 6 : 2); n = named ? 6 : 2; }
-    char digits[6]; unsigned count = 0, seq = ksc_file_sequence(f);
-    do { digits[count++] = (char)('0' + seq % 10); seq /= 10; } while (seq && count < 6);
-    while (count < (named ? 2u : 6u)) digits[count++] = '0';
+    if (n == name_start) {
+        unsigned fallback = named ? 6 : 2;
+        memcpy(out + n, named ? "SCREEN" : "SC", fallback); n += fallback;
+    }
     while (count) out[n++] = digits[--count];
     memcpy(out + n, ".BMP", 5);
 }
@@ -159,7 +188,8 @@ void ksc_decode_init(struct ksc_decoder *d, const uint8_t *data, size_t size) {
     struct ksc_file f = {data, (uint32_t)size};
     unsigned height = ksc_file_height(&f);
     if (!height) { d->failed = true; return; }
-    if (size >= KSC_META_BYTES && !memcmp(data, "KSN1", 4)) { data += KSC_META_BYTES; size -= KSC_META_BYTES; }
+    if (size >= KSC_BOOT_META_BYTES && !memcmp(data, "KSN2", 4)) { data += KSC_BOOT_META_BYTES; size -= KSC_BOOT_META_BYTES; }
+    else if (size >= KSC_META_BYTES && !memcmp(data, "KSN1", 4)) { data += KSC_META_BYTES; size -= KSC_META_BYTES; }
     d->pixels = KSC_WIDTH * height; d->data = data; d->size = size;
     d->version = size >= 3 ? data[2] : 0;
     d->failed = size < 3 || data[0] != 'K' || data[1] != 'L' || (data[2] != 1 && data[2] != 2);

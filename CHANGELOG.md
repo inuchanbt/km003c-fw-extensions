@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - Capture filenames grouped by boot
+
+- Prefix newly saved screenshots with a minimum-four-digit boot group, such as `0001_MEASUREMENT02.BMP`; images saved during the same boot share a group. Existing images keep their names and contents.
+- Allocate a group on the first successful save, not on export-only or capture-free boots. Clearing all captures resets numbering; the number is not a permanent identifier.
+- Store the new group in CRC-protected KSN2 records; old capture firmware cannot read them. Export images and clear both capture banks with this version before downgrading or restoring stock.
+- A predecessor was tested on one HW 2.3 / FW 2.0.7 meter across three capture boots including a tall Modules screenshot. The final component was installed on that meter and exported a further grouped capture with prior images retained; its missing-title branch was PC-tested. The packaged Windows installer was verified offline, not installed end-to-end on a second meter. HW 2.1 remains unsupported.
+
 ## 0.2.1 - Live external-memory backup
 
 - Read the first 3 MiB of external NOR as consecutive verified 4 KiB pairs, retrying a changing chunk at most twice. The resulting snapshot is explicitly non-atomic and its method is recorded in schema 2; old schema 1 backups remain readable.

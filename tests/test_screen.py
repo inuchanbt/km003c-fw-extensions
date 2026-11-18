@@ -68,6 +68,7 @@ class ScreenTests(unittest.TestCase):
         cls.lib = C.CDLL(str(binary))
         signatures = {
             'screen_context_size': ([], C.c_size_t),
+            'ksc_next_boot': ([C.c_void_p], C.c_uint32),
             'screen_name': ([C.c_void_p, C.c_uint, C.c_uint, C.c_void_p], None),
             'screen_encode_height': ([C.c_void_p, C.c_uint, C.c_void_p, C.c_size_t], C.c_size_t),
             'screen_encode': ([C.c_void_p, C.c_void_p, C.c_size_t, C.c_uint], C.c_size_t),
@@ -291,6 +292,55 @@ class ScreenTests(unittest.TestCase):
         out = C.create_string_buffer(36)
         self.lib.screen_name(b'KL\2',3,41,out)
         self.assertEqual(out.value,b'SC000041.BMP')
+
+    def test_boot_names_and_catalog_keep_old_images_and_use_committed_groups(self):
+        old = b'KSN1' + struct.pack('<HH', 240, 240) + b'OVERVIEW'.ljust(24, b'\0')
+        def meta(group, name=b'OVERVIEW'):
+            return (b'KSN2' + struct.pack('<HH', 240, 240) + name.ljust(24, b'\0') +
+                    struct.pack('<II', group, ~group & 0xffffffff))
+        for group, seq, expected in ((1, 9, '0001_OVERVIEW09.BMP'),
+                                     (9999, 10, '9999_OVERVIEW10.BMP'),
+                                     (10000, 11, '10000_OVERVIEW11.BMP'),
+                                     (99999999, 999999, '99999999_OVERVIEW999999.BMP')):
+            data = meta(group)
+            out = C.create_string_buffer(36)
+            self.lib.screen_name(data, len(data), seq, out)
+            self.assertEqual(out.value.decode(), expected)
+        for missing in (b'', b'!@#'):
+            data = meta(1, missing)
+            out = C.create_string_buffer(36)
+            self.lib.screen_name(data, len(data), 9, out)
+            self.assertEqual(out.value, b'0001_SCREEN09.BMP')
+        data = meta(99999999, b'ABCDEFGHIJKLMNOPQRSTUVW')
+        out = C.create_string_buffer(36)
+        self.lib.screen_name(data, len(data), 999999, out)
+        self.assertEqual(out.value, b'99999999_ABCDEFGHIJKLMNOP999999.BMP')
+        pixels = [0x1234] * PIXELS
+        image = self.encode(pixels)
+        self.assertEqual(self.mount(journal([record(old + image, 1), record(meta(4) + image, 2),
+                                             record(meta(9) + image, 3, False)])), 2)
+        self.assertEqual(self.lib.ksc_next_boot(self.ctx), 5)
+        out = self.block(129)
+        self.assertIn(b'SC000001BMP', out)
+        self.assertIn(b'SC000002BMP', out)
+        self.assertEqual(self.decode(meta(4) + image), (True, pixels))
+        tagged = meta(4) + image
+        root = self.block(129)
+        slots = [root[i:i+32] for i in range(128, 224, 32) if root[i] != 0xe5]
+        lfn = b''.join(bytes(e[j:j+2]) for e in reversed(slots)
+                       for j in (1,3,5,7,9,14,16,18,20,22,24,28,30)).decode('utf-16le').split('\0')[0]
+        self.assertEqual(lfn, '0004_OVERVIEW02.BMP')
+        from tools.export_screen207 import export
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'images'
+            report = export(journal([record(old + image, 1), record(tagged, 2)]), output)
+            self.assertEqual([x['file'] for x in report['files']], ['OVERVIEW01.BMP', '0004_OVERVIEW02.BMP'])
+            self.assertEqual((output / '0004_OVERVIEW02.BMP').read_bytes()[66:], struct.pack('<57600H', *pixels))
+        self.assertEqual(self.mount(journal([record(meta(99999999) + image, 1)])), 1)
+        self.assertEqual(self.lib.ksc_next_boot(self.ctx), 0)
+        broken = bytearray(meta(2)); broken[36] ^= 1
+        self.assertEqual(self.mount(journal([record(bytes(broken) + image, 1)])), 1)
+        self.assertEqual(self.lib.ksc_next_boot(self.ctx), 0)
 
     def test_named_tall_image_fat_chain_lfn_and_lossless_pixels(self):
         height = 683

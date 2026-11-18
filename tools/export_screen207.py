@@ -87,8 +87,12 @@ def export(data, output, expected=None, external=False, extra=None):
                     struct.pack_into('<2sI4xI', header, 0, b'BM', 66 + len(pixels), 66)
                     struct.pack_into('<IiiHHII', header, 14, 40, 240, -(len(pixels) // 480), 1, 16, 3, len(pixels))
                     struct.pack_into('<III', header, 54, 0xf800, 0x07e0, 0x001f)
-                    prefix = ''.join(chr(c) for c in payload[8:32].split(b'\0')[0] if 65 <= c <= 90 or 48 <= c <= 57) if payload[:4] == b'KSN1' else None
-                    name = f'{prefix or "SCREEN"}{seq:02d}.BMP' if prefix is not None else f'SC{seq:06d}.BMP'
+                    named = payload[:4] in (b'KSN1', b'KSN2')
+                    prefix = ''.join(chr(c) for c in payload[8:32].split(b'\0')[0] if 65 <= c <= 90 or 48 <= c <= 57) if named else None
+                    boot_prefix = f'{struct.unpack_from("<I", payload, 32)[0]:04d}_' if payload[:4] == b'KSN2' else ''
+                    number = f'{seq:02d}' if named else f'{seq:06d}'
+                    if named: prefix = (prefix or 'SCREEN')[:35 - len(boot_prefix) - len(number) - 4]
+                    name = f'{boot_prefix}{prefix if named else "SC"}{number}.BMP'
                     files.append((seq, bytes(header) + pixels, n, name))
             else:
                 issues.append(dict(sector=sector, offset=at, reason='uncommitted record'))

@@ -4,9 +4,9 @@
 struct test_screen { struct ksc_catalog catalog; struct ksc_disk disk; struct ksc_msc msc; };
 size_t screen_context_size(void) { return sizeof(struct test_screen); }
 void screen_name(const uint8_t *data, unsigned size, unsigned sequence, char out[36]) {
-    uint8_t record[24 + KSC_META_BYTES] = {0};
+    uint8_t record[24 + KSC_BOOT_META_BYTES] = {0};
     memcpy(record + 8, &sequence, 4);
-    memcpy(record + 24, data, size < KSC_META_BYTES ? size : KSC_META_BYTES);
+    memcpy(record + 24, data, size < KSC_BOOT_META_BYTES ? size : KSC_BOOT_META_BYTES);
     const struct ksc_file f = {record + 24, size}; ksc_file_name(&f, out);
 }
 size_t screen_encode_height(const uint16_t *pixels, unsigned height, uint8_t *out, size_t capacity) {

@@ -11,11 +11,13 @@ Experimental extensions to the stock ChargerLAB POWER-Z KM003C firmware. This re
 | Variant | Features | Meter controls |
 | --- | --- | --- |
 | `qr` | Export power-source SPR/EPR PDOs, cable e-marker results and PPS status as QR pages; import and decode on a phone | Hold Left + Right about one second; arrows change QR pages, Exit returns |
-| `screen` | Lossless 240×240 BMPs or tall scroll-page images; menu name + capture number; read-only USB drive | Hold Left + Right 0.5–under 2 seconds and release for normal capture; hold at least 2 seconds for tall capture |
+| `screen` | Lossless 240×240 BMPs or tall scroll-page images; boot number + menu + capture number; read-only USB drive | Hold Left + Right 0.5–under 2 seconds and release for normal capture; hold at least 2 seconds for tall capture |
 
 These are **separate firmware builds**. Keeping both in this repository does not enable both on the meter simultaneously.
 
 Capture storage is **1472 KiB with a 96-file limit**. Large images can fill storage sooner. The 128 MiB USB volume is a virtual BMP view, not physical capacity. See [capture operation](docs/SCREEN-CAPTURE-207.md).
+
+New captures group by boot, for example `0001_MEASUREMENT02.BMP`. Old captures keep their names. **Older capture firmware cannot read the new records:** export and clear both capture banks with this version before downgrading or restoring stock.
 
 ## Install on Windows
 
@@ -48,9 +50,9 @@ See [QR operation and queries](docs/NATIVE-INFO-207.md) and [the host CLI](docs/
 
 ## Firmware versions and validation
 
-Project version: **0.2.1**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.2.1-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
+Project version: **0.3.0**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.3.0-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
 
-QR and capture were tested on one qualified HW 2.3 meter. Capture validation includes old-image retention, saving into the additional bank, copying all 48 images through Windows USB and matching readback-derived BMPs, protected-settings CRC and calibration checks. The 96-file catalog was tested on the PC; 96 consecutive physical captures were not performed. See [hardware validation](docs/HARDWARE-SCREEN-2026-11-11.ja.md).
+QR and capture were tested on one qualified HW 2.3 meter. Earlier capture validation included 48 images and additional-bank checks. A boot-number predecessor was tested across three capture boots, including a tall image; the final component was then installed and produced one more correctly grouped image while retaining the previous five. Its missing-title fallback was PC-tested. The 0.3.0 Windows ZIP was tested offline; an end-to-end installation using that ZIP has not been performed. The 96-file catalog was tested on the PC; 96 consecutive physical captures were not performed. See [hardware validation](docs/SCREEN-CAPTURE-BOOT-NUMBER.ja.md).
 
 CI runs source-only Python, C/ARM and native-host checks. Private ROM/RAM/device tests require the owner's inputs and are never uploaded. See [contributing and porting](CONTRIBUTING.md).
 

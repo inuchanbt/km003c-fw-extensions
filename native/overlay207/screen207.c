@@ -37,7 +37,7 @@ struct capture_stream {
     uint32_t crc;
 };
 struct capture_plan {
-    uint8_t metadata[KSC_META_BYTES];
+    uint8_t metadata[KSC_BOOT_META_BYTES];
     uint8_t *page, *scroll;
     int16_t original_y, top, height, first, last, next;
     uint8_t bars;
@@ -73,6 +73,7 @@ struct screen207 {
     uint32_t capture_ms, render_crc;
     struct capture_plan *plan;
     uint32_t extra_status, extra_crc, guard_crc;
+    uint32_t boot_group, pending_group;
 };
 static bool read_keys(void *, void *);
 static struct screen207 *state(void) {
@@ -328,11 +329,13 @@ static bool prepare_save(struct screen207 *s, size_t n) {
     ksc207_nor_lock();
     ksc_store_mount(&ksc207_nor, &s->catalog, &seq);
     if (s->extra_status & 2) ksc_store_mount(&ksc207_extra, &s->catalog, &seq);
-    bool ok = !ksc207_nor_doom() && s->catalog.count < KSC_FILES &&
+    uint32_t group = s->boot_group ? s->boot_group : ksc_next_boot(&s->catalog);
+    bool ok = group && !ksc207_nor_doom() && s->catalog.count < KSC_FILES &&
         (((s->extra_status & 2) && ksc_store_begin(&ksc207_extra, n, seq, &transaction)) ||
          ksc_store_begin(&ksc207_nor, n, seq, &transaction));
     ksc207_nor_unlock();
     if (ok) {
+        s->pending_group = group;
         memset(&s->stream, 0, sizeof(s->stream));
         s->stream.transaction = transaction; s->stream.crc = ~0u;
     }
@@ -378,7 +381,7 @@ static uint8_t *front_window(uint8_t *obj, unsigned depth, const char **fallback
     return (uintptr_t)signal_get(obj) == 0x3c9f9u ? obj : NULL;
 }
 static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
-    memset(p, 0, sizeof(*p)); memcpy(p->metadata, "KSN1", 4);
+    memset(p, 0, sizeof(*p)); memcpy(p->metadata, "KSN2", 4);
     p->height = 240;
     const char *name = "SCREEN";
     uint8_t *win = front_window(*(uint8_t **)(display + 0x48), 0, &name);
@@ -410,8 +413,8 @@ static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
 static size_t render_capture(struct screen207 *s, uint8_t *display, bool writing, size_t capacity) {
     struct capture_plan *p = s->plan;
     s->capture_flags = 0; s->render_crc = ~0u; memset(s->bad_area, 0, sizeof(s->bad_area));
-    if (writing && !stream_bytes(&s->stream, p->metadata, KSC_META_BYTES)) return 0;
-    ksc_encode_sink(s->encoder, writing ? stream_bytes : NULL, &s->stream, capacity - KSC_META_BYTES);
+    if (writing && !stream_bytes(&s->stream, p->metadata, KSC_BOOT_META_BYTES)) return 0;
+    ksc_encode_sink(s->encoder, writing ? stream_bytes : NULL, &s->stream, capacity - KSC_BOOT_META_BYTES);
     s->encoder->pixels = (unsigned)p->height * KSC_WIDTH;
     s->flush = *(flush_cb *)(display + 12); *(flush_cb *)(display + 12) = flush_capture;
     s->capture_stage = 3;
@@ -436,10 +439,10 @@ static size_t render_capture(struct screen207 *s, uint8_t *display, bool writing
         invalidate(*(void **)(display + 0x48)); refresh(*(void **)(display + 0x38));
     }
     size_t n = ksc_encode_finish(s->encoder);
-    s->capture_pixels = s->encoder->count; s->capture_bytes = (uint32_t)s->encoder->used + KSC_META_BYTES;
-    if (s->encoder->failed) s->capture_flags |= s->encoder->used >= capacity - KSC_META_BYTES ? 1u : 4u;
+    s->capture_pixels = s->encoder->count; s->capture_bytes = (uint32_t)s->encoder->used + KSC_BOOT_META_BYTES;
+    if (s->encoder->failed) s->capture_flags |= s->encoder->used >= capacity - KSC_BOOT_META_BYTES ? 1u : 4u;
     if (s->encoder->count != s->encoder->pixels) s->capture_flags |= 8;
-    return n ? n + KSC_META_BYTES : 0;
+    return n ? n + KSC_BOOT_META_BYTES : 0;
 }
 static void capture(struct screen207 *s, uint32_t now, bool tall) {
     struct capture_plan plan;
@@ -464,6 +467,9 @@ static void capture(struct screen207 *s, uint32_t now, bool tall) {
     }
     uint32_t crc = s->render_crc;
     if (!prepare_save(s, needed)) { title = "CAPTURE NOT SAVED"; detail = "COPY THEN CLEAR / RETRY"; goto done; }
+    uint32_t inverse = ~s->pending_group;
+    memcpy(plan.metadata + 32, &s->pending_group, 4);
+    memcpy(plan.metadata + 36, &inverse, 4);
     size_t n = render_capture(s, display, true, needed);
     s->encoded_bytes = (uint32_t)n; s->capture_stage = 5;
     if (!n || n != needed || s->render_crc != crc) { detail = "DISPLAY CHANGED / RETRY"; goto done; }
@@ -473,6 +479,7 @@ static void capture(struct screen207 *s, uint32_t now, bool tall) {
         saved = ksc_store_commit(&s->stream.transaction, ~s->stream.crc);
         ksc207_nor_unlock();
     }
+    if (saved) s->boot_group = s->pending_group;
     title = saved ? "CAPTURE SAVED" : "CAPTURE NOT SAVED";
     detail = saved ? "USB COPY AFTER RECONNECT" : "COPY THEN CLEAR / RETRY";
 done:

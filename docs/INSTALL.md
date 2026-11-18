@@ -25,7 +25,7 @@ Normal reconnection uses **no buttons**. QR: hold Left + Right about one second.
 
 Reuse the original qualified stock backup. Prepare the other variant with menu 4. In menu 5, explicitly supply the **old installed variant's private bundle** when prompted. Both bundles are audited against the same backup, and the live device must exactly match stock, the new extension, or that explicitly supplied old bundle. Unknown firmware is refused. Keep every original/private bundle for recovery.
 
-External capture images can be retained by compatible versions. Export images before switching variants, downgrading or restoring. Legacy internal captures at `0x78000–0x7C000` must be explicitly cleared with their owning build before updating; otherwise protected-tail comparison stops the update. Before downgrading to a version unaware of the extra capture bank, export and explicitly clear **both** banks with the current build.
+External capture images can be retained by compatible versions. Export images before switching variants, downgrading or restoring. Legacy internal captures at `0x78000–0x7C000` must be explicitly cleared with their owning build before updating; otherwise protected-tail comparison stops the update. **Older capture firmware cannot read 0.3.0 boot-grouped records:** export and explicitly clear **both** banks with 0.3.0 before downgrading or restoring stock.
 
 ## Restore or recover
 
