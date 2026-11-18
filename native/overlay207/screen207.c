@@ -38,7 +38,7 @@ struct capture_stream {
 };
 struct capture_plan {
     uint8_t metadata[KSC_BOOT_META_BYTES];
-    uint8_t *page, *scroll;
+    uint8_t *page, *scroll, *firmware_footer, *dialog;
     int16_t original_y, top, height, first, last, next;
     uint8_t bars;
     unsigned base;
@@ -384,7 +384,8 @@ static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
     memset(p, 0, sizeof(*p)); memcpy(p->metadata, "KSN2", 4);
     p->height = 240;
     const char *name = "SCREEN";
-    uint8_t *win = front_window(*(uint8_t **)(display + 0x48), 0, &name);
+    uint8_t *root = *(uint8_t **)(display + 0x48);
+    uint8_t *win = front_window(root, 0, &name);
     if (win) {
         uint8_t *ext = *(uint8_t **)(win + 36);
         name = *(const char **)(ext + 8);
@@ -400,6 +401,24 @@ static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
                 p->top = (int16_t)coordinate(page, 1);
                 p->original_y = (int16_t)(coordinate(scroll, 1) - p->top);
                 p->bars = (*(uint8_t **)(page + 36))[32];
+                /* Stock creates the scan's FW label on the active screen,
+                 * outside the scrollable page. Verify it is still attached
+                 * before using the stock-owned pointer. */
+                uint8_t *footer = *(uint8_t *const volatile *)0x1fffca28u;
+                if (footer) for (uint8_t *c = child_next(root, NULL); c; c = child_next(root, c))
+                    if (c == footer && !(c[0x34] & 16) && (uintptr_t)signal_get(c) == 0x31cd5u)
+                        p->firmware_footer = c;
+                /* Stock result message boxes are fixed children of the top
+                 * layer. Keep the complete box in the first viewport only. */
+                uint8_t *top_layer = *(uint8_t **)(display + 0x54);
+                if (top_layer && !(top_layer[0x34] & 16)) {
+                    for (uint8_t *c = child_next(top_layer, NULL); c; c = child_next(top_layer, c)) {
+                        if (!(c[0x34] & 16) && (uintptr_t)signal_get(c) == 0x341c9u) {
+                            p->dialog = c;
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -428,13 +447,20 @@ static size_t render_capture(struct screen207 *s, uint8_t *display, bool writing
             int next = 240 + offset;
             if (next <= (int)end || next > p->height) { s->encoder->failed = true; break; }
             p->first = (int16_t)(240 - (next - (int)end)); end = (unsigned)next;
+            if (p->dialog) p->dialog[0x34] |= 16;
         } else end = 240;
+        if (p->firmware_footer) {
+            if (end < (unsigned)p->height) p->firmware_footer[0x34] |= 16;
+            else p->firmware_footer[0x34] &= (uint8_t)~16u;
+        }
         invalidate(*(void **)(display + 0x48)); refresh(*(void **)(display + 0x38));
         if (p->next != 240 || s->encoder->count != end * KSC_WIDTH) s->encoder->failed = true;
     } while (end < (unsigned)p->height && !s->encoder->failed);
     s->capture_stage = 4;
     *(flush_cb *)(display + 12) = s->flush;
     if (p->scroll) {
+        if (p->firmware_footer) p->firmware_footer[0x34] &= (uint8_t)~16u;
+        if (p->dialog) p->dialog[0x34] &= (uint8_t)~16u;
         set_y(p->scroll, p->original_y); (*(uint8_t **)(p->page + 36))[32] = p->bars;
         invalidate(*(void **)(display + 0x48)); refresh(*(void **)(display + 0x38));
     }

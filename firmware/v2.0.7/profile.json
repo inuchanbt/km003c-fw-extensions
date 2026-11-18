@@ -14,8 +14,8 @@
     },
     "screen": {
       "description": "Lossless visible/tall BMP capture with boot grouping and read-only USB export",
-      "implementation_revision": "boot-1",
-      "reference_extension_sha256": "88a5d5e277a4027929f9068bd674620f014424a8f59b67a8173b0f1b90f6493a",
+      "implementation_revision": "boot-2",
+      "reference_extension_sha256": "cfc10d3d06e6e8a00b8c68a824225ae4a3cab2be8b37a3478963a78dd4e5b53a",
       "physical_storage_bytes": 1507328,
       "file_limit": 96,
       "maximum_height": 2048

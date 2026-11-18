@@ -105,6 +105,12 @@ def main():
     parser.add_argument('--build', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--tall', action='store_true', help='Exercise one long capture and native scroll restoration')
+    parser.add_argument('--firmware-footer', action='store_true',
+                        help='Model a tall native page with the stock Auto detection footer')
+    parser.add_argument('--result-dialog', action='store_true',
+                        help='Add a native fixed result message box to the footer fixture')
+    parser.add_argument('--live-result-dialog', action='store_true',
+                        help='Use a sanitized native Auto detection snapshot with its existing dialog')
     parser.add_argument('--extra-bank', action='store_true', help='Qualify and capture into the extra bank; requires --capture-only')
     parser.add_argument('--adapter-only', action='store_true', help='Exercise the final extra-bank page and erase boundary without capture')
     parser.add_argument('--capture-only', action='store_true', help='Check one native capture without the separate USB/erase models')
@@ -154,6 +160,8 @@ def main():
     cpu.mem_write(0x40010408, struct.pack('<I', 0x10050))
     writes, erases, pending_flash, recent, notices = [], [], [], [], []
     rendered_bands = []
+    footer = dialog = 0
+    footer_states, dialog_states = [], []
     flash_error = [0]
     native_reads, watchdog_writes, notice_details = [], [], []
     usb_rx, usb_tx, model_usb = [], [], [False]
@@ -267,6 +275,10 @@ def main():
             notice_details.append(bytes(uc.mem_read(uc.reg_read(UC_ARM_REG_R2), 32)).split(b'\0')[0].decode())
         if args.tall and address == (symbols['flush_capture'] & ~1):
             area = struct.unpack('<4h', uc.mem_read(uc.reg_read(UC_ARM_REG_R1), 8))
+            if footer and area[1] == 0:
+                footer_states.append(bool(bytes(uc.mem_read(footer + 0x34, 1))[0] & 16))
+            if dialog and area[1] == 0:
+                dialog_states.append(bool(bytes(uc.mem_read(dialog + 0x34, 1))[0] & 16))
             rendered_bands.append((area, bytes(uc.mem_read(uc.reg_read(UC_ARM_REG_R2), (area[3] - area[1] + 1) * 480))))
         if model_usb[0] and address in (0x510ee, 0x5120c):
             ep, ptr, n = (uc.reg_read(r) for r in (UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3))
@@ -362,8 +374,30 @@ def main():
     set_keys((), 154); call(word(0x1fffb4fc))
     display = call(0x2a6a4)
     original_flush = word(display + 12)
-    original_group = word(input_device + 0x5c)
-    if args.tall_height:
+    if args.firmware_footer:
+        assert args.tall and not args.capture_only
+        root = word(display + 0x48)
+        win = call(0x34cd0, root, 0)
+        assert word(win + 28) == 0x3c9f9
+        page = word(word(win + 36))
+        scroll = word(word(page + 36) + 4)
+        top = struct.unpack('<h', cpu.mem_read(page + 18, 2))[0]
+        cpu.mem_write(word(scroll + 36), bytes(4))  # Fix the fixture's modeled height.
+        footer_fixture_height = args.tall_height or 271
+        assert 271 <= footer_fixture_height <= 448  # Exactly two viewports.
+        call(0x35c04, scroll, 240, footer_fixture_height - top)
+        # Execute the qualified stock instructions that create/style the
+        # FW label on the active screen and store its pointer. Stop before
+        # the detector changes the scrollable window or starts hardware work.
+        cpu.reg_write(UC_ARM_REG_SP, 0x2100ffb0)
+        cpu.emu_start(0x25201, 0x25254, count=1_000_000)
+        assert cpu.reg_read(UC_ARM_REG_PC) == 0x25254
+        footer = word(0x1fffca28)
+        assert footer and word(footer) == root and word(footer + 28) == 0x31cd5
+        assert bytes(cpu.mem_read(word(word(footer + 36)), 6)) == b'2.0.7\0'
+        footer_flags = bytes(cpu.mem_read(footer + 0x34, 1))
+        assert not footer_flags[0] & 16
+    elif args.tall_height:
         assert args.tall and 300 <= args.tall_height <= 2048
         # Find the real retained Modules window, then extend only its native
         # scrollable container. This fixture is an explicit emulator model.
@@ -375,6 +409,30 @@ def main():
         # the production overlay never changes either native container flag.
         cpu.mem_write(word(scroll+36),bytes(4))
         call(0x35c04,scroll,240,args.tall_height-top)
+
+    if args.result_dialog:
+        assert args.firmware_footer and footer_fixture_height == 305
+        body, extra = 0x21002000, 0x21002200
+        cpu.mem_write(body, b'Test result\nFixed 5 V\nFixed 9 V\nFixed 12 V\nFixed 15 V\nFixed 20 V\nPPS 5-21 V\0')
+        cpu.mem_write(extra, b'Extended capabilities\nFixed 28 V\nAVS 15-28 V\0')
+        dialog = call(0x3d5cc, body, extra)
+        assert dialog and word(dialog) == word(display + 0x54) and word(dialog + 28) == 0x341c9
+        coords = struct.unpack('<4h', cpu.mem_read(dialog + 16, 8))
+        assert coords[1] < 175 <= coords[3], 'Dialog must overlap the rows that will be stitched'
+        dialog_flags = bytes(cpu.mem_read(dialog + 0x34, 1))
+        assert not dialog_flags[0] & 16
+    if args.live_result_dialog:
+        assert args.tall and not args.firmware_footer and not args.tall_height and not args.capture_only
+        root, top_layer = word(display + 0x48), word(display + 0x54)
+        footer = word(0x1fffca28)
+        dialog = call(0x34cd0, top_layer, 0)
+        assert footer and word(footer) == root and word(footer + 28) == 0x31cd5
+        assert dialog and word(dialog) == top_layer and word(dialog + 28) == 0x341c9
+        footer_flags = bytes(cpu.mem_read(footer + 0x34, 1))
+        dialog_flags = bytes(cpu.mem_read(dialog + 0x34, 1))
+        assert not (footer_flags[0] | dialog_flags[0]) & 16
+        footer_fixture_height = 305  # The retained Auto detection scene.
+    original_group = word(input_device + 0x5c)
 
     def keys(keys=(), now=0):
         count = len(watchdog_writes)
@@ -431,6 +489,16 @@ def main():
         assert len(frames) % 2 == 0 and len(frames) >= 4
         assert all(len(f) == 115200 for f in frames)
         assert frames[:len(frames)//2] == frames[len(frames)//2:]
+        if footer:
+            assert height == footer_fixture_height and payload[:4] == b'KSN2'
+            assert struct.unpack_from('<I', payload, 32)[0] == 1
+            assert footer_states == [True, False, True, False], footer_states
+            assert bytes(cpu.mem_read(footer + 0x34, 1)) == footer_flags
+        if dialog:
+            assert dialog_states == [False, True, False, True], dialog_states
+            assert bytes(cpu.mem_read(dialog + 0x34, 1)) == dialog_flags
+        if args.live_result_dialog:
+            assert payload[8:32].split(b'\0')[0] == b'AUTODETECTION'
         # Every original object's geometry must be restored, including the
         # native page and all offscreen descendants. Ignore newly allocated
         # capture notice/state; inspect the qualified old native heap blocks.

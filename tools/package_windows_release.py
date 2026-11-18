@@ -17,7 +17,7 @@ QUALIFIED = {
     'qr': ('ffc18d85c1cbccad49dc597cb44894597176129cb0821f4bbd5d0183f521d556',
            '4140de1a80beef119b18de0f12bc0ebbcfe74c2c579bb24941694173ee4e25f0'),
     'screen': ('0d8089b74a0dca4fed1e16e19bb356745943ab9efced926a2c4c1dc109a127ee',
-               '88a5d5e277a4027929f9068bd674620f014424a8f59b67a8173b0f1b90f6493a'),
+               'cfc10d3d06e6e8a00b8c68a824225ae4a3cab2be8b37a3478963a78dd4e5b53a'),
 }
 
 

@@ -1,8 +1,8 @@
 # Windows release assembly and validation
 
-Project **0.3.0**, stock profile **FW 2.0.7 / HW 2.3**. [English installation](INSTALL.md) / [日本語の導入手順](INSTALL.ja.md).
+Project **0.3.1**, stock profile **FW 2.0.7 / HW 2.3**. [English installation](INSTALL.md) / [日本語の導入手順](INSTALL.ja.md).
 
-The QR component remains 13400 bytes (`4140de1a…`). The new boot-grouped capture component is 16004 bytes (`88a5d5e2…`), with exact reference hashes in [the profile](../firmware/v2.0.7/profile.json). The Windows native tool also pins the gate hashes. A mismatched component/variant stops before stock processing or USB access. Older capture versions cannot decode the new records: export and explicitly clear both banks before downgrading or restoring stock.
+The QR component is 13,400 bytes (`4140de1a…`). The 0.3.1 capture component is 16,284 bytes (`cfc10d3d…`). See the [profile](../firmware/v2.0.7/profile.json) for exact reference hashes. The Windows native tool also checks gate hashes and rejects mismatched components before stock processing or USB access. Capture versions 0.3.0 and 0.3.1 share the same record format. Before restoring stock or downgrading to a version without boot-grouped filenames, export captures and explicitly clear both banks with the installed capture version.
 
 ## Build and assemble
 

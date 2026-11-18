@@ -22,7 +22,7 @@ fn components(folder: &Path, variant: Variant) -> Result<(Vec<u8>, Vec<u8>)> {
         ),
         Variant::Screen => (
             "0d8089b74a0dca4fed1e16e19bb356745943ab9efced926a2c4c1dc109a127ee",
-            "88a5d5e277a4027929f9068bd674620f014424a8f59b67a8173b0f1b90f6493a",
+            "cfc10d3d06e6e8a00b8c68a824225ae4a3cab2be8b37a3478963a78dd4e5b53a",
         ),
     };
     let gate = fs::read(folder.join("gate.bin"))?;

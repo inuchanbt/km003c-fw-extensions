@@ -50,9 +50,9 @@ See [QR operation and queries](docs/NATIVE-INFO-207.md) and [the host CLI](docs/
 
 ## Firmware versions and validation
 
-Project version: **0.3.0**. Stock firmware version: **2.0.7**. Release tags include both, e.g. `v0.3.0-fw2.0.7`. Profiles live under `firmware/v<stock-version>/`; future stock versions require their own qualified addresses, hashes and tests. Do not change a version string to reuse a 2.0.7 build on newer firmware.
+Project version **0.3.1** targets stock firmware **2.0.7**. Release tags include both, as in `v0.3.1-fw2.0.7`. Future stock versions require their own qualified addresses, hashes and tests under `firmware/v<stock-version>/`.
 
-QR and capture were tested on one qualified HW 2.3 meter. Earlier capture validation included 48 images and additional-bank checks. A boot-number predecessor was tested across three capture boots, including a tall image; the final component was then installed and produced one more correctly grouped image while retaining the previous five. Its missing-title fallback was PC-tested. The 0.3.0 Windows ZIP was tested offline; an end-to-end installation using that ZIP has not been performed. The 96-file catalog was tested on the PC; 96 consecutive physical captures were not performed. See [hardware validation](docs/SCREEN-CAPTURE-BOOT-NUMBER.ja.md).
+On one qualified HW 2.3 meter, the 0.3.1 capture component exported 240×305 Auto detection BMPs with and without a PD 3.1 dialog. The dialog and firmware version each appeared once. Earlier validation covered capture filenames grouped by boot, 48 USB image copies and the extra storage bank. The Windows ZIP is checked offline. See [hardware validation](docs/SCREEN-CAPTURE-BOOT-NUMBER.ja.md).
 
 CI runs source-only Python, C/ARM and native-host checks. Private ROM/RAM/device tests require the owner's inputs and are never uploaded. See [contributing and porting](CONTRIBUTING.md).
 

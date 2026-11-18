@@ -119,7 +119,7 @@ while ($true) {
                 Write-Host (T 'Copy the backup and this complete prepared folder to another safe location before installing.' '導入前にバックアップと、このpreparedフォルダ全体を別の安全な場所にもコピーしてください。')
             }
             '5' {
-                Write-Host (T 'Before switching away from capture 0.3.0, export images and clear both capture banks with that version; older versions cannot read its records.' 'キャプチャ0.3.0から別版へ変更する前は、画像を退避し同版で両保存バンクを消去。旧版は新形式を読めません。')
+                Write-Host (T 'Export images before changing firmware. Capture 0.3.0 to 0.3.1 retains images. Before switching to QR or an older capture without boot grouping, clear both capture banks with the installed capture version.' '更新前に画像を退避してください。キャプチャ0.3.0から0.3.1への更新では画像を保持できます。QR版や起動番号のない旧版へ変更する前は、導入中のキャプチャ版で両保存バンクを消去してください。')
                 Select-Stock
                 Select-Bundle
                 Call-Tool 'km003c-overlay-host.exe' @('--stock',$script:Stock,'audit','--bundle',$script:Bundle)

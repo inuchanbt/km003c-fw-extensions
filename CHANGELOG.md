@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 - Keep tall Auto detection captures intact
+
+- Draw the result dialog once in its original position and the firmware version once at the bottom. Keep the full scrollable content and boot-grouped filenames.
+- On one HW 2.3 / FW 2.0.7 meter, updated and read back the capture component, then exported 240×305 BMPs with and without a PD 3.1 result dialog. The dialog and version each appear once, and the dialog-free image matches the preceding build pixel for pixel.
+- The capture format is compatible with 0.3.0, and a direct update uses the same stock backup and the previous private bundle. The QR component is unchanged.
+
 ## 0.3.0 - Capture filenames grouped by boot
 
 - Prefix newly saved screenshots with a minimum-four-digit boot group, such as `0001_MEASUREMENT02.BMP`; images saved during the same boot share a group. Existing images keep their names and contents.
