@@ -12,6 +12,7 @@ use std::{fs, path::Path};
 pub enum Variant {
     Qr,
     Screen,
+    ScreenThemes,
 }
 
 fn components(folder: &Path, variant: Variant) -> Result<(Vec<u8>, Vec<u8>)> {
@@ -23,6 +24,10 @@ fn components(folder: &Path, variant: Variant) -> Result<(Vec<u8>, Vec<u8>)> {
         Variant::Screen => (
             "0d8089b74a0dca4fed1e16e19bb356745943ab9efced926a2c4c1dc109a127ee",
             "cfc10d3d06e6e8a00b8c68a824225ae4a3cab2be8b37a3478963a78dd4e5b53a",
+        ),
+        Variant::ScreenThemes => (
+            "23fa02d947598e9eb4ff517df286ffb392e35825c17579f95faed2d6c72a5d48",
+            "2fdda587bbb17e432d4a4b1e432bafcb408e27d4358f2bbba70c85033549d0c4",
         ),
     };
     let gate = fs::read(folder.join("gate.bin"))?;
@@ -94,7 +99,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         fs::write(dir.path().join("gate.bin"), [0; 264]).unwrap();
         fs::write(dir.path().join("extension.bin"), [0; 80]).unwrap();
-        for variant in [Variant::Qr, Variant::Screen] {
+        for variant in [Variant::Qr, Variant::Screen, Variant::ScreenThemes] {
             let out = dir.path().join("output");
             let err =
                 prepare(&dir.path().join("missing-stock"), dir.path(), variant, &out).unwrap_err();

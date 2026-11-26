@@ -39,9 +39,8 @@ struct capture_stream {
 struct capture_plan {
     uint8_t metadata[KSC_BOOT_META_BYTES];
     uint8_t *page, *scroll, *firmware_footer, *dialog;
-    int16_t original_y, top, height, first, last, next;
+    int16_t original_y, top, bottom, height, first, last, next;
     uint8_t bars;
-    unsigned base;
 };
 _Static_assert(sizeof(struct capture_stream) <= sizeof(struct ksc_catalog), "Capture workspace must fit the existing catalog");
 _Static_assert(sizeof(struct ksc_catalog) == 776, "Keep the qualified ARM catalog and state ABI unchanged");
@@ -380,9 +379,12 @@ static uint8_t *front_window(uint8_t *obj, unsigned depth, const char **fallback
     }
     return (uintptr_t)signal_get(obj) == 0x3c9f9u ? obj : NULL;
 }
+/* The capture planner also fits in the stock gap before the extension. */
+__attribute__((noinline, section(".capture_plan")))
 static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
     memset(p, 0, sizeof(*p)); memcpy(p->metadata, "KSN2", 4);
     p->height = 240;
+    p->bottom = 240;
     const char *name = "SCREEN";
     uint8_t *root = *(uint8_t **)(display + 0x48);
     uint8_t *win = front_window(root, 0, &name);
@@ -392,13 +394,29 @@ static void plan_capture(struct capture_plan *p, uint8_t *display, bool tall) {
         uint8_t *page = *(uint8_t **)ext;
         if (tall) {
             uint8_t *scroll = *(uint8_t **)(*(uint8_t **)(page + 36) + 4);
-            int h = coordinate(scroll, 3) - coordinate(scroll, 1) + 1 + coordinate(page, 1);
+            bool full_page = coordinate(page, 0) == 0 && coordinate(page, 2) == 239 &&
+                             coordinate(page, 3) == 239;
+            /* Themes has a list inside the window's otherwise static page. */
+            if (full_page && equal(name, "Themes")) {
+                uint8_t *list = child_next(scroll, NULL);
+                if (list && !(list[0x34] & 16) && (uintptr_t)signal_get(list) == 0x32655u &&
+                    coordinate(list, 0) == 3 && coordinate(list, 2) == 236 &&
+                    coordinate(list, 1) >= coordinate(page, 1) && coordinate(list, 3) <= coordinate(page, 3)) {
+                    page = list;
+                    scroll = *(uint8_t **)(*(uint8_t **)(page + 36) + 4);
+                }
+            }
+            int bottom = coordinate(page, 3) + 1;
+            int h = 240 + coordinate(scroll, 3) - coordinate(scroll, 1) + 1
+                        + coordinate(page, 1) - (full_page ? bottom : 240);
             if (h > 240) {
-                if (h > KSC_MAX_HEIGHT || coordinate(page, 0) != 0 || coordinate(page, 2) != 239 || coordinate(page, 3) != 239) {
+                if (!full_page || h > KSC_MAX_HEIGHT || coordinate(page, 1) < 0 ||
+                    bottom > 240 || coordinate(page, 1) >= bottom - 1) {
                     p->height = -1; return;
                 }
                 p->page = page; p->scroll = scroll; p->height = (int16_t)h;
                 p->top = (int16_t)coordinate(page, 1);
+                p->bottom = (int16_t)bottom;
                 p->original_y = (int16_t)(coordinate(scroll, 1) - p->top);
                 p->bars = (*(uint8_t **)(page + 36))[32];
                 /* Stock creates the scan's FW label on the active screen,
@@ -440,15 +458,18 @@ static size_t render_capture(struct screen207 *s, uint8_t *display, bool writing
     if (p->scroll) { (*(uint8_t **)(p->page + 36))[32] &= (uint8_t)~31u; set_y(p->scroll, 0); }
     unsigned end = 0;
     do {
-        p->first = 0; p->last = 239; p->next = 0; p->base = end * KSC_WIDTH;
+        p->first = 0; p->last = (int16_t)(p->bottom - 1); p->next = 0;
         if (end) {
             set_y(p->scroll, (int16_t)(p->top - (int)end));
             int offset = p->top - coordinate(p->scroll, 1);
-            int next = 240 + offset;
-            if (next <= (int)end || next > p->height) { s->encoder->failed = true; break; }
-            p->first = (int16_t)(240 - (next - (int)end)); end = (unsigned)next;
+            int next = p->bottom + offset;
+            int content_end = p->height - (240 - p->bottom);
+            if (next <= (int)end || next > content_end) { s->encoder->failed = true; break; }
+            p->first = (int16_t)(p->bottom - (next - (int)end));
+            end = (unsigned)next;
+            if (next == content_end) { p->last = 239; end = (unsigned)p->height; }
             if (p->dialog) p->dialog[0x34] |= 16;
-        } else end = 240;
+        } else end = p->bottom;
         if (p->firmware_footer) {
             if (end < (unsigned)p->height) p->firmware_footer[0x34] |= 16;
             else p->firmware_footer[0x34] &= (uint8_t)~16u;

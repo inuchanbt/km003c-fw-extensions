@@ -9,7 +9,7 @@ import subprocess
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
-from package_capture_trial import SOURCE_KITS, digest, kit_files
+from package_capture_trial import SOURCE_KITS, digest, themes_kit
 
 MANIFEST = "capture-trial-manifest.json"
 SCRIPT = "Install-Capture.ps1"
@@ -80,10 +80,11 @@ def run(command, *, cwd, keyboard="", expected=0, **variables):
         # Windows PowerShell 5.1 emits redirected text using the OEM code page.
         raw = result.stdout + result.stderr
         raise RuntimeError(raw.decode("oem", errors="replace"))
+    return result.stdout
 
 
 def powershell(kit, args, **kwargs):
-    run([PS, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", kit / SCRIPT, *args], cwd=kit, **kwargs)
+    return run([PS, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", kit / SCRIPT, *args], cwd=kit, **kwargs)
 
 
 def inspect(stock, *, mode="Application", wrong_port=False, hardware=None):
@@ -120,7 +121,7 @@ def write_manifest(kit):
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
-def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
+def test(archive, hw21_zip, hw23_zip, overlay21, overlay23, host21, host23, stock21, stock23, v1, prior23):
     original_inventories = [inventory(stock) for stock in (stock21, stock23)]
     if archive.with_suffix(".zip.sha256").read_text().split() != [digest(archive.read_bytes()), archive.name]:
         raise ValueError("ZIP checksum mismatch")
@@ -131,9 +132,12 @@ def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
         with ZipFile(archive) as zip_file:
             manifest = json.loads(zip_file.read(MANIFEST))
             records = {entry["path"]: (entry["bytes"], entry["sha256"]) for entry in manifest["files"]}
-            expected = {"Install.cmd", SCRIPT, "START-HERE.ja.md", "LICENSE"}
-            for key, source in (("hw21", hw21_zip), ("hw23", hw23_zip)):
-                for name, raw in kit_files(source, key).items():
+            expected = {"Install.cmd", SCRIPT, "START-HERE.md", "START-HERE.ja.md", "LICENSE"}
+            assert manifest["distribution"] == "release" and manifest["version"] == "0.3.2"
+            assert zip_file.read(SCRIPT).decode("utf-8-sig").isascii()
+            for key, source, overlay, host in (("hw21", hw21_zip, overlay21, host21),
+                                                ("hw23", hw23_zip, overlay23, host23)):
+                for name, raw in themes_kit(key, source, overlay, host).items():
                     expected.add(name)
                     assert zip_file.read(name) == raw
             assert manifest["source_kits"] == {key: value[0] for key, value in SOURCE_KITS.items()}
@@ -144,7 +148,9 @@ def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
                 assert records[name] == (len(raw), digest(raw))
             zip_file.extractall(kit)
         run([CMD, "/d", "/c", "Install.cmd", "-CheckPackage"], cwd=kit)
-        powershell(kit, [], keyboard="0\n")
+        menu = powershell(kit, [], keyboard="0\n")
+        assert b"KM003C Screen Capture v0.3.2" in menu
+        assert b"2  Install or update using an existing backup" in menu
         gate = kit / "hw21/overlay/gate.bin"
         original_gate = gate.read_bytes()
         try:
@@ -165,12 +171,21 @@ def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
 
         # Get exact old installed-image hashes from the actual bundled host.
         prior21 = {}
-        for version, assets in (("boot-numberless", "overlay-previous"), ("boot-v2", "overlay-boot-v2"),
+        for version, assets in (("boot-v4", "overlay-boot-v4"),
+                                ("boot-numberless", "overlay-previous"), ("boot-v2", "overlay-boot-v2"),
                                 ("boot-v3", "overlay-boot-v3")):
             output = root / version
             run([kit / "hw21/km003c-overlay-host.exe", "--stock", stock21, "package-trial",
                  "--overlay", kit / "hw21" / assets, "--output", output], cwd=kit)
             prior21[version] = digest((output / "expected-overlay-internal.bin").read_bytes())
+        # Independently recreate the installed HW2.1 v4 image with the exact public v1.
+        assert digest(v1.read_bytes()) == "31ddc18562105fba9fb67432721836fb65b674cdc1cb1577b66628af46502e38"
+        with ZipFile(v1) as old_zip:
+            old_zip.extractall(root / "public-v1")
+        old_kit = root / "public-v1/hw21"
+        run([old_kit / "km003c-overlay-host.exe", "--stock", stock21, "package-trial",
+             "--overlay", old_kit / "overlay", "--output", root / "public-v1-overlay"], cwd=kit)
+        assert prior21["boot-v4"] == digest((root / "public-v1-overlay/expected-overlay-internal.bin").read_bytes())
         audit_hash23 = digest((prior23 / "expected-overlay-internal.bin").read_bytes())
 
         path = kit / SCRIPT
@@ -204,11 +219,11 @@ def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
                              checks=[state("unknown-within-write-span", sha)])
             assert [(hw, command, Path(prev).name if prev else "") for hw, command, prev in calls if command in mutations] == [
                 ("hw21", "flash-probe", version), ("hw21", "start-probe", "")]
-        calls = scenario("HW2.3 audited previous bundle", update23 + f"{prior23.parent}\nINSTALL\n",
-                         stock=stock23, checks=[state("unknown-within-write-span", audit_hash23), state("overlay-probe", audit_hash23)])
+        calls = scenario("HW2.3 recognizes the installed v0.3.1 without a previous bundle", update23 + "INSTALL\n",
+                         stock=stock23, checks=[state("unknown-within-write-span", audit_hash23)])
         assert [(hw, command) for hw, command, _ in calls if command in mutations] == [
             ("hw23", "flash-probe"), ("hw23", "start-probe")]
-        assert next(Path(prev) for _, command, prev in calls if command == "flash-probe") == prior23
+        assert next(Path(prev).parent.name for _, command, prev in calls if command == "flash-probe") == "capture-0.3.1"
         for stock, keyboard, hardware in ((stock21, update21, "hw21"), (stock23, update23, "hw23")):
             calls = scenario(hardware + " skips same-version flash", keyboard, stock=stock, checks=[state("overlay-probe")])
             assert [(hw, command) for hw, command, _ in calls if command in mutations] == [(hardware, "start-probe")]
@@ -254,7 +269,8 @@ def test(archive, hw21_zip, hw23_zip, stock21, stock23, prior23):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    for flag in ("archive", "hw21-zip", "hw23-zip", "stock21", "stock23", "prior23"):
+    for flag in ("archive", "hw21-zip", "hw23-zip", "overlay21", "overlay23", "host21",
+                 "host23", "stock21", "stock23", "v1", "prior23"):
         parser.add_argument("--" + flag, type=Path, required=True)
     args = parser.parse_args()
     test(*(path.resolve(strict=True) for path in vars(args).values()))

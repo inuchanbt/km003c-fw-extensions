@@ -4,7 +4,7 @@ English · [日本語](README.ja.md)
 
 Experimental extensions to the stock ChargerLAB POWER-Z KM003C firmware. This repository maintains **QR display/export** and **screen capture** variants together, with profiles for exact stock firmware builds.
 
-**Current support: stock FW 2.0.7, HW 2.3, exact application and bootloader hashes only.** A matching version label is insufficient. See [compatibility](docs/COMPATIBILITY.md) and the [profile](firmware/v2.0.7/profile.json).
+**Stock FW 2.0.7 only.** Screen Capture supports qualified HW 2.1 (4 MB ROM) and HW 2.3. QR supports qualified HW 2.3. See [compatibility](docs/COMPATIBILITY.md) for the exact build requirements.
 
 ## Choose a variant
 
@@ -15,13 +15,16 @@ Experimental extensions to the stock ChargerLAB POWER-Z KM003C firmware. This re
 
 These are **separate firmware builds**. Keeping both in this repository does not enable both on the meter simultaneously.
 
-Capture storage is **1472 KiB with a 96-file limit**. Large images can fill storage sooner. The 128 MiB USB volume is a virtual BMP view, not physical capacity. See [capture operation](docs/SCREEN-CAPTURE-207.md).
+Capture storage on HW 2.3 is **1472 KiB with a 96-file limit**. HW 2.1 uses **1 MiB with a 64-file limit**. Large images can fill storage sooner. The 128 MiB USB volume presents the captured BMPs. See [capture operation](docs/SCREEN-CAPTURE-207.md).
 
-New captures group by boot, for example `0001_MEASUREMENT02.BMP`. Old captures keep their names. **Older capture firmware cannot read the new records:** export and clear both capture banks with this version before downgrading or restoring stock.
+New captures group by boot, for example `0001_MEASUREMENT02.BMP`. Old captures keep their names. Export and clear captures with the installed capture firmware before downgrading or restoring stock.
 
 ## Install on Windows
 
-Download the **Windows x64 ZIP** from [Releases](https://github.com/inuchanbt/km003c-fw-extensions/releases), extract it, and double-click **Install.cmd**. The English/Japanese menu guides you through your own stock backup, read-only BOOT Loader qualification, QR/capture preparation, installation and restoration. No Python, Rust or compiler is required. The ZIP contains extension components and tools; stock firmware and private recovery are generated locally from your meter. Read [the installation guide](docs/INSTALL.md) first. The kit is experimental and unsigned; see [validation scope](docs/WINDOWS-RELEASE.md).
+- **Screen Capture (HW 2.1 and 2.3).** Extract the Windows x64 ZIP and run `Install.cmd`. For upgrades from Unified Capture v1, choose option 2 and select the original stock backup. The installer displays English prompts and includes English and Japanese instructions. [Download v0.3.2](https://github.com/inuchanbt/km003c-fw-extensions/releases/tag/v0.3.2-fw2.0.7) · [Installation guide](docs/INSTALL-CAPTURE.md)
+- **QR (HW 2.3).** Use the earlier Windows kit and its English/Japanese installer. [Download v0.3.1](https://github.com/inuchanbt/km003c-fw-extensions/releases/tag/v0.3.1-fw2.0.7) · [Installation guide](docs/INSTALL.md)
+
+Both kits generate private installation and recovery files locally from your meter's stock backup. The installers are unsigned.
 
 ## Build from source
 
@@ -50,7 +53,7 @@ See [QR operation and queries](docs/NATIVE-INFO-207.md) and [the host CLI](docs/
 
 ## Firmware versions and validation
 
-Project version **0.3.1** targets stock firmware **2.0.7**. Release tags include both, as in `v0.3.1-fw2.0.7`. Future stock versions require their own qualified addresses, hashes and tests under `firmware/v<stock-version>/`.
+Screen Capture **v0.3.2** targets stock firmware **2.0.7**. The Themes list was captured through `purple` on both hardware revisions. On HW 2.3, the resulting BMP was 240×296 and was copied from the USB drive. On HW 2.1, [@tomoca2](https://github.com/tomoca2) reported a successful update, tall capture and recovery with the trial build.
 
 On one qualified HW 2.3 meter, the 0.3.1 capture component exported 240×305 Auto detection BMPs with and without a PD 3.1 dialog. The dialog and firmware version each appeared once. Earlier validation covered capture filenames grouped by boot, 48 USB image copies and the extra storage bank. The Windows ZIP is checked offline. See [hardware validation](docs/SCREEN-CAPTURE-BOOT-NUMBER.ja.md).
 

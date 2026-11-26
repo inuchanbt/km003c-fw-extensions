@@ -8,6 +8,7 @@ SECTIONS {
     .gate : ALIGN(4) {
         KEEP(*gate_entry.o(.text*))
         *gate.o(.text* .rodata*)
+        *(.capture_plan)
     } > GATE
     .header : ALIGN(4) { KEEP(*(.kpd207.header)) } > TAIL
     .capabilities : ALIGN(4) { KEEP(*(.kpd207.capabilities)) } > TAIL

@@ -111,6 +111,8 @@ def main():
                         help='Add a native fixed result message box to the footer fixture')
     parser.add_argument('--live-result-dialog', action='store_true',
                         help='Use a sanitized native Auto detection snapshot with its existing dialog')
+    parser.add_argument('--live-themes', action='store_true',
+                        help='Replay a live Themes list and verify its clipped viewport is stitched')
     parser.add_argument('--extra-bank', action='store_true', help='Qualify and capture into the extra bank; requires --capture-only')
     parser.add_argument('--adapter-only', action='store_true', help='Exercise the final extra-bank page and erase boundary without capture')
     parser.add_argument('--capture-only', action='store_true', help='Check one native capture without the separate USB/erase models')
@@ -326,8 +328,8 @@ def main():
             assert not bus_locked[0]; bus_locked[0] = True  # Unit caller owns the read lock.
         cpu.reg_write(UC_ARM_REG_SP, 0x2100fff0); cpu.reg_write(UC_ARM_REG_LR, 0x101)
         for reg, value in zip((UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3), arguments): cpu.reg_write(reg, value)
-        try: cpu.emu_start(at | 1, 0x100, count=300_000_000 if args.tall_height else 80_000_000,
-                           timeout=300_000_000 if args.tall_height else 110_000_000)
+        try: cpu.emu_start(at | 1, 0x100, count=300_000_000 if args.tall else 80_000_000,
+                           timeout=300_000_000 if args.tall else 110_000_000)
         except Exception as exc: raise RuntimeError(f'ARM stopped near {[hex(x) for x in recent]}') from exc
         assert cpu.reg_read(UC_ARM_REG_PC) == 0x100, f'ARM did not return near {[hex(x) for x in recent]}'
         assert cpu.reg_read(UC_ARM_REG_SP) == 0x2100fff0
@@ -339,6 +341,17 @@ def main():
         for key, at in ((27, 0x42a7021c), (10, 0x42a7022c), (20, 0x42a70220), (19, 0x42a70224)):
             cpu.mem_write(at, struct.pack('<I', int(key not in keys)))
         cpu.mem_write(0x1fffba20, struct.pack('<I', now & 0xffffffff))
+
+    def restore_native_keypad():
+        current = call(0x30ab4, 0)
+        cpu.mem_write(current + 4, struct.pack('<I', 0x24607))
+        cpu.mem_write(current + 12, bytes(4))
+        for i, fn in enumerate((0x90e9, 0x90fb, 0x910d, 0x911f, 0x9131, 0x9149)):
+            cpu.mem_write(0x1fffb4fc + i * 16, struct.pack('<I', fn))
+
+    if args.live_themes:
+        assert args.tall and not args.capture_only
+        restore_native_keypad()
 
     # Run the exact native raw-GPIO chord predicates, which bypass LVGL.
     set_keys((27, 10)); assert call(0x9130) == 1
@@ -518,11 +531,19 @@ def main():
         # positions; retain only the previously unseen tail of position two.
         # Each additional viewport contributes at most its page body. The
         # final view may clamp at the bottom; crop only the unseen tail.
-        top = 32  # Qualified Modules window header in the retained fixture.
-        expected = bytes(frames[0]); remaining = height - 240
-        for frame in frames[1:len(frames)//2]:
-            rows = min(remaining,240-top); expected += frame[-rows*480:]; remaining -= rows
-        assert remaining == 0 and rgb == expected
+        if args.live_themes:
+            assert payload[8:32].split(b'\0')[0] == b'THEMES'
+            assert height == 296 and len(frames) == 4
+            # The stock list clips at row 236. Retain its lower margin once,
+            # after adding the last 56 list rows from the second viewport.
+            expected = frames[0][:237 * 480] + frames[1][181 * 480:]
+            assert rgb == expected
+        else:
+            top = 32  # Qualified Modules window header in the retained fixture.
+            expected = bytes(frames[0]); remaining = height - 240
+            for frame in frames[1:len(frames)//2]:
+                rows = min(remaining,240-top); expected += frame[-rows*480:]; remaining -= rows
+            assert remaining == 0 and rgb == expected
         args.output.mkdir(); (args.output/'native-rgb565.bin').write_bytes(rgb)
         (args.output/'capture-sectors.bin').write_bytes(bytes(cpu.mem_read(bank, bank_bytes)))
         report = dict(schema=1, usb_access=False, hardware_test=False, tall_native_capture=True,
@@ -693,11 +714,7 @@ def main():
     for token in (0, 1):
         boot()
         cpu.mem_write(0x400c0804, bytes(4))
-        current = call(0x30ab4, 0)
-        cpu.mem_write(current + 4, struct.pack('<I', 0x24607))
-        cpu.mem_write(current + 12, bytes(4))
-        for i, fn in enumerate((0x90e9, 0x90fb, 0x910d, 0x911f, 0x9131, 0x9149)):
-            cpu.mem_write(0x1fffb4fc + i * 16, struct.pack('<I', fn))
+        restore_native_keypad()
         set_keys((19, 20), 6000); cpu.reg_write(UC_ARM_REG_R9, token); call(entry)
         assert not word(0x400c0804) & 2
     # Force a deterministic larger native redraw. It must span both blank

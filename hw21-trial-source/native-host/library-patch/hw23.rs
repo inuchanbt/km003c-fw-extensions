@@ -31,11 +31,16 @@ pub const LOADER_HASH: &str = if cfg!(feature = "hw21-trial") {
 #[cfg(feature = "hw21-trial")]
 const TRIAL_GATE_LEN: usize = 268;
 #[cfg(feature = "hw21-trial")]
-const TRIAL_EXTENSION_LEN: usize = 15_784;
+const TRIAL_EXTENSION_LEN: usize = 16_004;
 #[cfg(feature = "hw21-trial")]
 const TRIAL_GATE_HASH: &str = "0d8089b74a0dca4fed1e16e19bb356745943ab9efced926a2c4c1dc109a127ee";
 #[cfg(feature = "hw21-trial")]
 const TRIAL_EXTENSION_HASH: &str =
+    "568c4a92165a7df4eb4514465a4f92956f1ffd9edb6c4f53f9d493e2a80adb18";
+#[cfg(feature = "hw21-trial")]
+const BOOT_V4_EXTENSION_LEN: usize = 15_784;
+#[cfg(feature = "hw21-trial")]
+const BOOT_V4_EXTENSION_HASH: &str =
     "71ac5258858e726055fee19c91a8e56b01fbc9f745ec74478bce0abc9ff0f78d";
 #[cfg(feature = "hw21-trial")]
 const BOOT_V3_EXTENSION_LEN: usize = 15_668;
@@ -81,6 +86,7 @@ pub fn validate_payload(data: &[u8]) -> Result<Kind, KMError> {
     {
         let extension_hash = match data.len().checked_sub(TAIL_OFFSET) {
             Some(TRIAL_EXTENSION_LEN) => TRIAL_EXTENSION_HASH,
+            Some(BOOT_V4_EXTENSION_LEN) => BOOT_V4_EXTENSION_HASH,
             Some(BOOT_V3_EXTENSION_LEN) => BOOT_V3_EXTENSION_HASH,
             Some(BOOT_V2_EXTENSION_LEN) => BOOT_V2_EXTENSION_HASH,
             Some(PREVIOUS_EXTENSION_LEN) => PREVIOUS_EXTENSION_HASH,
@@ -208,7 +214,8 @@ pub fn trial_candidate(
         || gate.len() != TRIAL_GATE_LEN
         || !matches!(
             extension.len(),
-            TRIAL_EXTENSION_LEN | BOOT_V3_EXTENSION_LEN | BOOT_V2_EXTENSION_LEN | PREVIOUS_EXTENSION_LEN
+            TRIAL_EXTENSION_LEN | BOOT_V4_EXTENSION_LEN | BOOT_V3_EXTENSION_LEN
+                | BOOT_V2_EXTENSION_LEN | PREVIOUS_EXTENSION_LEN
         )
     {
         return Err(invalid("Unexpected stock or trial overlay size"));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 - Unified Screen Capture for HW 2.1 and HW 2.3
+
+- Capture the entire Themes list, from `blue` through `purple`, as one tall BMP.
+- Use menu option 2 and the original stock backup to upgrade from Unified Capture v1 on either hardware revision. The installer skips flash writes when v0.3.2 is already installed.
+- The Windows x64 installer uses English prompts and includes English and Japanese guides.
+- HW 2.3 exported a 240×296 Themes BMP from hardware. On HW 2.1, [@tomoca2](https://github.com/tomoca2) confirmed update, tall capture and recovery with the trial build. The release uses the same extension components and native tools.
+
 ## 0.3.1 - Keep tall Auto detection captures intact
 
 - Draw the result dialog once in its original position and the firmware version once at the bottom. Keep the full scrollable content and boot-grouped filenames.

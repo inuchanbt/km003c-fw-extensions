@@ -3,6 +3,7 @@
 - Overview: [English](../README.md) / [Japanese](../README.ja.md)
 - Compatibility: [English](COMPATIBILITY.md) / [Japanese](COMPATIBILITY.ja.md)
 - Install and recover: [English](INSTALL.md) / [Japanese](INSTALL.ja.md)
+- Unified capture installer (HW 2.1 and 2.3): [English](INSTALL-CAPTURE.md) / [Japanese](INSTALL-CAPTURE-TRIAL.ja.md)
 - Capture: [English](SCREEN-CAPTURE-207.md) / [Japanese](SCREEN-CAPTURE-207.ja.md)
 - QR source/cable/PPS operation: [English](NATIVE-INFO-207.md) / [Japanese](NATIVE-INFO-207.ja.md)
 - QR hardware record: [English](HARDWARE-2026-11-05.md) / [Japanese](HARDWARE-2026-11-05.ja.md)
